@@ -1,4 +1,4 @@
-const API = 'http://127.0.0.1:5000/api';
+const API = 'https://packvote-backend.onrender.com/api';
 
 const DEST_IMAGES = {
   'Mumbai':      'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=800&q=80',

@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PackVote — Vote</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .vote-page{min-height:100vh;padding-top:100px;padding-bottom:80px}
+    .phase-banner{display:flex;align-items:center;gap:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:32px}
+    .phase-icon{font-size:1.6rem}.phase-title{font-weight:700;font-size:1rem}
+    .phase-sub{font-size:.82rem;color:var(--text-secondary);margin-top:2px}
+    .phase-badge{margin-left:auto;background:rgba(108,99,255,.15);color:var(--accent-1);border-radius:50px;padding:4px 14px;font-size:.75rem;font-weight:700}
+    .vote-layout{display:grid;grid-template-columns:270px 1fr;gap:28px;align-items:start}
+    .vote-sidebar{position:sticky;top:100px}
+    .dest-cards{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+    .dest-card{display:flex;align-items:center;gap:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 18px;transition:var(--transition)}
+    .dest-card:hover{border-color:var(--border-hover)}
+    .dest-card-img{width:60px;height:60px;border-radius:10px;object-fit:cover;flex-shrink:0}
+    .dest-card-info{flex:1}.dest-card-name{font-weight:700;font-size:1rem;margin-bottom:2px}
+    .dest-card-desc{font-size:.78rem;color:var(--text-secondary)}
+    .dest-card-votes{display:flex;align-items:center;gap:8px}
+    .vote-count{font-size:.9rem;font-weight:700;color:var(--accent-3);min-width:24px;text-align:center}
+    .vote-btn{width:36px;height:36px;border-radius:50%;border:2px solid var(--border);background:var(--bg-secondary);font-size:1rem;cursor:pointer;transition:var(--transition);display:flex;align-items:center;justify-content:center}
+    .vote-btn.up.voted{border-color:var(--accent-3);background:rgba(67,233,123,.15)}
+    .vote-btn.down.voted{border-color:var(--accent-2);background:rgba(255,101,132,.15)}
+    .vote-btn.up:hover{border-color:var(--accent-3);background:rgba(67,233,123,.1);transform:scale(1.1)}
+    .vote-btn.down:hover{border-color:var(--accent-2);background:rgba(255,101,132,.1);transform:scale(1.1)}
+    .add-dest-wrap{display:flex;gap:10px;margin-bottom:16px}.add-dest-wrap input{flex:1}
+    .dest-card-delete{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:4px 8px;border-radius:6px;transition:var(--transition)}
+    .dest-card-delete:hover{color:var(--accent-2);background:rgba(255,101,132,.1)}
+    .member-vote-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.83rem}
+    .member-vote-row:last-child{border-bottom:none}
+    .voted-badge{font-size:.7rem;background:rgba(67,233,123,.15);color:var(--accent-3);padding:2px 8px;border-radius:50px}
+    .pending-badge{font-size:.7rem;background:rgba(255,215,0,.1);color:var(--accent-gold);padding:2px 8px;border-radius:50px}
+    .empty-dest{text-align:center;padding:40px 20px;color:var(--text-muted);border:2px dashed var(--border);border-radius:var(--radius-lg)}
+    .survey-step{display:none}.survey-step.active{display:block}
+    .opt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+    .opt-grid-2{grid-template-columns:repeat(2,1fr)}
+    .opt-card{border:2px solid var(--border);border-radius:var(--radius-md);padding:16px 10px;text-align:center;cursor:pointer;transition:var(--transition);background:var(--bg-glass)}
+    .opt-card:hover{border-color:rgba(108,99,255,.5);transform:translateY(-2px)}
+    .opt-card.sel{border-color:var(--accent-1);background:rgba(108,99,255,.12)}
+    .opt-icon{font-size:1.6rem;margin-bottom:6px}.opt-label{font-weight:700;font-size:.85rem}
+    .opt-sub{font-size:.72rem;color:var(--text-secondary);margin-top:2px}
+    .survey-prog{display:flex;gap:6px;margin-bottom:20px}
+    .s-dot{height:4px;flex:1;border-radius:2px;background:var(--border);transition:var(--transition)}
+    .s-dot.active{background:var(--accent-1)}.s-dot.done{background:var(--accent-3)}
+    .all-voted-banner{background:linear-gradient(135deg,rgba(67,233,123,.1),rgba(108,99,255,.08));border:1px solid rgba(67,233,123,.3);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:24px;text-align:center}
+    .borda-info{background:rgba(108,99,255,.07);border:1px dashed rgba(108,99,255,.3);border-radius:var(--radius-md);padding:12px 16px;font-size:.8rem;color:var(--text-secondary);margin-bottom:16px;line-height:1.7}
+    .borda-info strong{color:var(--accent-1)}
+
+    /* ── GOOGLE-STYLE SEARCH ── */
+    .dest-search-wrapper{position:relative;margin-bottom:20px}
+    .dest-search-bar{
+      display:flex;align-items:center;gap:12px;
+      background:var(--bg-secondary);
+      border:2px solid var(--border);
+      border-radius:50px;
+      padding:14px 20px;
+      transition:var(--transition);
+      cursor:text;
+    }
+    .dest-search-bar:focus-within{
+      border-color:var(--accent-1);
+      box-shadow:0 0 0 4px rgba(108,99,255,.12);
+      background:var(--bg-card);
+    }
+    .dest-search-icon{font-size:1.2rem;flex-shrink:0;color:var(--text-muted)}
+    .dest-search-input{
+      flex:1;background:none;border:none;outline:none;
+      font-family:var(--font-body);font-size:.95rem;
+      color:var(--text-primary);
+    }
+    .dest-search-input::placeholder{color:var(--text-muted)}
+    .dest-search-clear{
+      background:none;border:none;color:var(--text-muted);
+      cursor:pointer;font-size:1rem;padding:0 4px;
+      transition:var(--transition);flex-shrink:0;
+    }
+    .dest-search-clear:hover{color:var(--accent-2)}
+
+    /* Dropdown */
+    .dest-dropdown{
+      position:absolute;top:calc(100% + 8px);left:0;right:0;
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:var(--radius-lg);
+      box-shadow:0 20px 60px rgba(0,0,0,.5);
+      z-index:200;
+      max-height:320px;overflow-y:auto;
+      display:none;
+    }
+    .dest-dropdown.open{display:block;animation:dropIn .15s ease}
+    @keyframes dropIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+    .dest-dropdown::-webkit-scrollbar{width:4px}
+    .dest-dropdown::-webkit-scrollbar-thumb{background:var(--accent-1);border-radius:2px}
+
+    .dd-section-title{
+      font-size:.7rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+      color:var(--text-muted);padding:10px 16px 4px;
+    }
+    .dd-item{
+      display:flex;align-items:center;gap:12px;
+      padding:10px 16px;cursor:pointer;transition:var(--transition);
+    }
+    .dd-item:hover,.dd-item.focused{background:rgba(108,99,255,.08)}
+    .dd-item-img{
+      width:36px;height:36px;border-radius:8px;object-fit:cover;flex-shrink:0;
+      background:var(--bg-secondary);
+    }
+    .dd-item-info{flex:1;min-width:0}
+    .dd-item-name{font-weight:600;font-size:.88rem}
+    .dd-item-state{font-size:.72rem;color:var(--text-muted);margin-top:1px}
+    .dd-item-icon{font-size:1rem;flex-shrink:0}
+    .dd-no-results{padding:20px;text-align:center;color:var(--text-muted);font-size:.85rem}
+
+    /* Selected destinations chips */
+    .selected-dests-label{
+      font-size:.78rem;font-weight:600;color:var(--text-muted);
+      text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;
+    }
+    .selected-dests-chips{
+      display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;
+      min-height:36px;
+    }
+    .sel-chip{
+      display:inline-flex;align-items:center;gap:8px;
+      background:rgba(108,99,255,.15);border:1.5px solid rgba(108,99,255,.4);
+      border-radius:50px;padding:6px 12px 6px 8px;
+      font-size:.82rem;font-weight:600;color:var(--accent-1);
+      animation:chipIn .2s ease;
+    }
+    @keyframes chipIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+    .sel-chip img{width:20px;height:20px;border-radius:50%;object-fit:cover}
+    .sel-chip-remove{
+      background:none;border:none;color:rgba(108,99,255,.6);
+      cursor:pointer;font-size:.9rem;padding:0;line-height:1;
+      transition:var(--transition);
+    }
+    .sel-chip-remove:hover{color:var(--accent-2)}
+    .sel-chip-rank{
+      background:var(--accent-1);color:#fff;
+      border-radius:50%;width:18px;height:18px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:.65rem;font-weight:800;flex-shrink:0;
+    }
+    .sel-empty-hint{
+      font-size:.82rem;color:var(--text-muted);
+      padding:8px 0;font-style:italic;
+    }
+
+    /* Popular categories */
+    .quick-cats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+    .quick-cat-btn{
+      display:flex;align-items:center;gap:6px;
+      padding:7px 14px;border-radius:50px;
+      border:1px solid var(--border);background:var(--bg-glass);
+      font-size:.78rem;font-weight:600;color:var(--text-secondary);
+      cursor:pointer;transition:var(--transition);
+    }
+    .quick-cat-btn:hover{border-color:var(--accent-1);color:var(--accent-1);background:rgba(108,99,255,.08)}
+    .quick-cat-btn.active{border-color:var(--accent-1);color:var(--accent-1);background:rgba(108,99,255,.12)}
+
+    @media(max-width:768px){.vote-layout{grid-template-columns:1fr}.vote-sidebar{position:static}}
+  </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo">PackVote ✈</a>
+    <ul class="nav-links">
+      <li><a href="dashboard.html">Dashboard</a></li>
+      <li><a href="vote.html">Vote</a></li>
+      <li><a href="results.html">Results</a></li>
+      <li><a href="planner.html">Planner</a></li>
+      <li><a href="expenses.html">Expenses</a></li>
+    </ul>
+    <a href="dashboard.html" class="btn btn-primary btn-sm">Dashboard ✈</a>
+  </div>
+</nav>
+
+<div class="vote-page">
+  <div class="container">
+    <div class="steps mb-32">
+      <div class="step done"><div class="step-circle">✓</div><span class="step-label">Create Group</span></div>
+      <div class="step-line done"></div>
+      <div class="step active"><div class="step-circle">2</div><span class="step-label">Survey & Vote</span></div>
+      <div class="step-line"></div>
+      <div class="step"><div class="step-circle">3</div><span class="step-label">Results</span></div>
+    </div>
+
+    <div class="vote-layout">
+      <!-- SIDEBAR -->
+      <div class="vote-sidebar">
+        <div class="card" style="margin-bottom:14px;">
+          <div style="font-weight:700;font-size:.88rem;margin-bottom:10px;">📋 Group</div>
+          <div id="groupInfoBox"><div style="font-size:.82rem;color:var(--text-muted);">Loading...</div></div>
+        </div>
+        <div class="card" style="margin-bottom:14px;">
+          <div style="font-weight:700;font-size:.88rem;margin-bottom:10px;">👥 Members</div>
+          <div id="memberVoteList"><div style="font-size:.82rem;color:var(--text-muted);">Loading...</div></div>
+        </div>
+        <div class="card">
+          <div style="font-weight:700;font-size:.88rem;margin-bottom:6px;">⚙️ Your Info</div>
+          <div style="font-size:.82rem;color:var(--text-muted);" id="userInfoBox"></div>
+        </div>
+      </div>
+
+      <!-- MAIN AREA -->
+      <div>
+        <div class="phase-banner">
+          <div class="phase-icon">📍</div>
+          <div>
+            <div class="phase-title" id="phaseTitle">Loading...</div>
+            <div class="phase-sub" id="phaseSub"></div>
+          </div>
+          <span class="phase-badge" id="phaseBadge">—</span>
+        </div>
+
+        <!-- CREATOR: add destinations -->
+        <div id="addDestSection" style="display:none;">
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:10px;">📍 Add destinations for your group</h3>
+          <div class="add-dest-wrap">
+            <input type="text" id="newDestInput" class="form-input" placeholder="e.g. Goa, Jaipur, Bali..." onkeypress="if(event.key==='Enter')addDestination()"/>
+            <button class="btn btn-primary" onclick="addDestination()">+ Add</button>
+          </div>
+          <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:16px;">Add all destinations your group is considering (min 2), then open voting.</p>
+          <div id="destCardList" class="dest-cards"></div>
+          <button class="btn btn-success w-full mt-8" id="openVotingBtn" onclick="openVoting()" style="justify-content:center;display:none;">
+            ✅ Open Survey & Voting for All Members
+          </button>
+        </div>
+
+        <!-- SURVEY -->
+        <div id="surveySection" style="display:none;">
+          <div class="card">
+            <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">📝 Your Travel Preferences Survey</div>
+            <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:16px;">
+              Complete this once. Your answers drive the AI destination recommendation.
+            </p>
+            <div class="survey-prog">
+              <div class="s-dot active" id="sv1"></div>
+              <div class="s-dot" id="sv2"></div>
+              <div class="s-dot" id="sv3"></div>
+            </div>
+
+            <!-- ── Step 1: Destination Search + Travel Style ── -->
+            <div class="survey-step active" id="ss1">
+              <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:4px;">Step 1 of 3 — Destinations & Style</div>
+              <h4 style="font-family:var(--font-display);font-size:1.1rem;font-weight:800;margin-bottom:6px;">Where do you want to go?</h4>
+              <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:14px;">
+                Search and pick up to 3 destinations. First pick = top preference.
+              </p>
+
+              <!-- Quick category filters -->
+              <div class="quick-cats" id="quickCats">
+                <button class="quick-cat-btn active" onclick="filterQuickCat('all',this)">🌍 All India</button>
+                <button class="quick-cat-btn" onclick="filterQuickCat('beach',this)">🏖️ Beaches</button>
+                <button class="quick-cat-btn" onclick="filterQuickCat('hill',this)">🏔️ Hill Stations</button>
+                <button class="quick-cat-btn" onclick="filterQuickCat('heritage',this)">🏰 Heritage</button>
+                <button class="quick-cat-btn" onclick="filterQuickCat('nature',this)">🌿 Nature</button>
+                <button class="quick-cat-btn" onclick="filterQuickCat('spiritual',this)">🕌 Spiritual</button>
+                <button class="quick-cat-btn" onclick="filterQuickCat('adventure',this)">🧗 Adventure</button>
+              </div>
+
+              <!-- Google-style search bar -->
+              <div class="dest-search-wrapper" id="destSearchWrapper">
+                <div class="dest-search-bar" onclick="document.getElementById('destSearchInput').focus()">
+                  <span class="dest-search-icon">🔍</span>
+                  <input
+                    type="text"
+                    id="destSearchInput"
+                    class="dest-search-input"
+                    placeholder="Search destinations... e.g. Goa, Manali, Ooty"
+                    autocomplete="off"
+                    oninput="onDestSearch(this.value)"
+                    onkeydown="onDestSearchKey(event)"
+                    onfocus="showDropdown()"
+                  />
+                  <button class="dest-search-clear" id="searchClearBtn" onclick="clearSearch()" style="display:none;">✕</button>
+                </div>
+                <div class="dest-dropdown" id="destDropdown"></div>
+              </div>
+
+              <!-- Selected destinations -->
+              <div class="selected-dests-label">Selected destinations <span id="selCount" style="color:var(--accent-1);">(0/3)</span></div>
+              <div class="selected-dests-chips" id="selectedChips">
+                <span class="sel-empty-hint">No destinations selected yet — search above ↑</span>
+              </div>
+
+              <!-- Travel style -->
+              <div style="margin-top:20px;">
+                <h4 style="font-family:var(--font-display);font-size:1rem;font-weight:800;margin-bottom:8px;">What kind of traveller are you?</h4>
+                <div class="opt-grid" id="styleGrid">
+                  <div class="opt-card" onclick="this.classList.toggle('sel')" data-val="beach"><div class="opt-icon">🏖️</div><div class="opt-label">Beach</div></div>
+                  <div class="opt-card" onclick="this.classList.toggle('sel')" data-val="adventure"><div class="opt-icon">🏔️</div><div class="opt-label">Adventure</div></div>
+                  <div class="opt-card" onclick="this.classList.toggle('sel')" data-val="food"><div class="opt-icon">🍜</div><div class="opt-label">Food</div></div>
+                  <div class="opt-card" onclick="this.classList.toggle('sel')" data-val="culture"><div class="opt-icon">🏛️</div><div class="opt-label">Culture</div></div>
+                  <div class="opt-card" onclick="this.classList.toggle('sel')" data-val="wellness"><div class="opt-icon">🧘</div><div class="opt-label">Wellness</div></div>
+                  <div class="opt-card" onclick="this.classList.toggle('sel')" data-val="nature"><div class="opt-icon">🌿</div><div class="opt-label">Nature</div></div>
+                  <div class="opt-card" onclick="this.classList.toggle('sel')" data-val="history"><div class="opt-icon">🏰</div><div class="opt-label">History</div></div>
+                  <div class="opt-card" onclick="this.classList.toggle('sel')" data-val="nightlife"><div class="opt-icon">🎵</div><div class="opt-label">Nightlife</div></div>
+                  <div class="opt-card" onclick="this.classList.toggle('sel')" data-val="shopping"><div class="opt-icon">🛍️</div><div class="opt-label">Shopping</div></div>
+                </div>
+              </div>
+              <button class="btn btn-primary w-full mt-16" onclick="surveyNext(2)" style="justify-content:center;">Continue →</button>
+            </div>
+
+            <!-- Step 2: Budget & Duration -->
+            <div class="survey-step" id="ss2">
+              <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:4px;">Step 2 of 3 — Budget & Duration</div>
+              <h4 style="font-family:var(--font-display);font-size:1.1rem;font-weight:800;margin-bottom:12px;">Budget & Trip Length</h4>
+              <label class="form-label">Budget per person per day</label>
+              <div class="opt-grid opt-grid-2" id="budgetGrid" style="margin-bottom:20px;">
+                <div class="opt-card" onclick="selOne('budgetGrid',this)" data-val="low"><div class="opt-icon">🪙</div><div class="opt-label">₹1000-2000</div><div class="opt-sub">Budget</div></div>
+                <div class="opt-card" onclick="selOne('budgetGrid',this)" data-val="medium"><div class="opt-icon">💳</div><div class="opt-label">₹2000-4000</div><div class="opt-sub">Medium</div></div>
+                <div class="opt-card" onclick="selOne('budgetGrid',this)" data-val="high"><div class="opt-icon">💎</div><div class="opt-label">₹4000-9000</div><div class="opt-sub">Premium</div></div>
+                <div class="opt-card" onclick="selOne('budgetGrid',this)" data-val="luxury"><div class="opt-icon">👑</div><div class="opt-label">₹9000+</div><div class="opt-sub">Luxury</div></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Preferred trip duration (days)</label>
+                <input type="number" id="durationInput" class="form-input" value="7" min="1" max="30"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Preferred travel month</label>
+                <select id="monthSelect" class="form-input">
+                  <option>January</option><option>February</option><option>March</option>
+                  <option>April</option><option>May</option><option>June</option>
+                  <option>July</option><option>August</option><option>September</option>
+                  <option>October</option><option>November</option><option selected>December</option>
+                </select>
+              </div>
+              <div style="display:flex;gap:12px;margin-top:16px;">
+                <button class="btn btn-secondary" onclick="surveyNext(1)" style="flex:1;justify-content:center;">← Back</button>
+                <button class="btn btn-primary" onclick="surveyNext(3)" style="flex:2;justify-content:center;">Continue →</button>
+              </div>
+            </div>
+
+            <!-- Step 3: Stay & Food -->
+            <div class="survey-step" id="ss3">
+              <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:4px;">Step 3 of 3 — Stay & Food</div>
+              <h4 style="font-family:var(--font-display);font-size:1.1rem;font-weight:800;margin-bottom:12px;">Stay & Food Preferences</h4>
+              <label class="form-label">Accommodation preference</label>
+              <div class="opt-grid opt-grid-2" id="accomGrid" style="margin-bottom:20px;">
+                <div class="opt-card" onclick="selOne('accomGrid',this)" data-val="hostel"><div class="opt-icon">🛏️</div><div class="opt-label">Hostel</div><div class="opt-sub">Budget</div></div>
+                <div class="opt-card" onclick="selOne('accomGrid',this)" data-val="guesthouse"><div class="opt-icon">🏡</div><div class="opt-label">Guesthouse</div><div class="opt-sub">Cozy</div></div>
+                <div class="opt-card" onclick="selOne('accomGrid',this)" data-val="hotel"><div class="opt-icon">🏨</div><div class="opt-label">Hotel</div><div class="opt-sub">Standard</div></div>
+                <div class="opt-card" onclick="selOne('accomGrid',this)" data-val="resort"><div class="opt-icon">🏖️</div><div class="opt-label">Resort</div><div class="opt-sub">Premium</div></div>
+              </div>
+              <label class="form-label">Food preference</label>
+              <div class="opt-grid" id="foodGrid">
+                <div class="opt-card" onclick="selOne('foodGrid',this)" data-val="veg"><div class="opt-icon">🥗</div><div class="opt-label">Vegetarian</div></div>
+                <div class="opt-card" onclick="selOne('foodGrid',this)" data-val="nonveg"><div class="opt-icon">🍗</div><div class="opt-label">Non-Veg</div></div>
+                <div class="opt-card" onclick="selOne('foodGrid',this)" data-val="both"><div class="opt-icon">🍽️</div><div class="opt-label">Both OK</div></div>
+              </div>
+              <div style="display:flex;gap:12px;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="surveyNext(2)" style="flex:1;justify-content:center;">← Back</button>
+                <button class="btn btn-success" onclick="submitSurveyAndProceed()" id="surveySubmitBtn" style="flex:2;justify-content:center;">
+                  Save & Vote on Destinations →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VOTE CARDS -->
+        <div id="votingSection" style="display:none;">
+          <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,rgba(67,233,123,.05),rgba(108,99,255,.05));border-color:rgba(67,233,123,.2);">
+            <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">✅ Survey complete!</div>
+            <p style="font-size:.82rem;color:var(--text-secondary);">Now vote on destinations below.</p>
+          </div>
+          <div class="borda-info">
+            <strong>How Borda Count works:</strong> Your <strong>first 👍</strong> gets the most points, second 👍 fewer, and so on.
+            The destination with the highest total points across ALL members wins.
+            👎 means you don't want that destination.
+          </div>
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:4px;">🗳️ Vote on destinations</h3>
+          <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:16px;">
+            👍 upvote destinations you want (earlier = more Borda points) · 👎 downvote ones you don't
+          </p>
+          <div id="voteCardList" class="dest-cards"></div>
+          <button class="btn btn-primary w-full mt-8" id="submitVoteBtn" onclick="submitVote()" style="justify-content:center;">
+            Submit My Vote ✈
+          </button>
+        </div>
+
+        <!-- WAITING -->
+        <div id="waitingSection" style="display:none;text-align:center;padding:60px 20px;">
+          <div style="font-size:3rem;margin-bottom:16px;">⏳</div>
+          <h3 style="font-size:1.1rem;font-weight:700;">Waiting for group creator...</h3>
+          <p style="color:var(--text-muted);margin-top:8px;">The creator is adding destinations. Page refreshes automatically.</p>
+        </div>
+
+        <!-- ALREADY VOTED -->
+        <div id="alreadyVotedSection" style="display:none;text-align:center;padding:60px 20px;">
+          <div style="font-size:3rem;margin-bottom:16px;">🎉</div>
+          <h3 style="font-size:1.1rem;font-weight:700;">You've already voted!</h3>
+          <p style="color:var(--text-muted);margin-top:8px;margin-bottom:24px;">Waiting for other members to vote...</p>
+          <div id="waitingForOthers" style="margin-bottom:24px;"></div>
+          <a href="results.html" class="btn btn-primary" style="justify-content:center;">View Results →</a>
+        </div>
+
+        <!-- ALL VOTED -->
+        <div id="allVotedSection" style="display:none;" class="all-voted-banner">
+          <div style="font-size:2.5rem;margin-bottom:12px;">🏆</div>
+          <h3 style="font-size:1.1rem;font-weight:700;">All members have voted!</h3>
+          <p style="color:var(--text-secondary);margin-top:8px;margin-bottom:20px;">Results are ready.</p>
+          <a href="results.html" class="btn btn-primary" style="justify-content:center;">See Results →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="app.js"></script>
+<script>
+const API_BASE   = 'http://127.0.0.1:5000/api';
+let groupId      = null;
+let currentUser  = null;
+let destinations = [];
+let myVotes      = {};
+let myDestPicks  = [];   // [{name, state, tags}]
+let isCreator    = false;
+let votingOpen   = false;
+let hasVoted     = false;
+let pollTimer    = null;
+let ddFocusIdx   = -1;
+let activeQuickCat = 'all';
+
+// ── 500+ India Destinations Database ─────────────────────────────────────
+const INDIA_DESTINATIONS = [
+  // Beaches
+  {name:'Goa',state:'Goa',tags:['beach','nightlife','food'],icon:'🏖️'},
+  {name:'Calangute',state:'Goa',tags:['beach'],icon:'🏖️'},
+  {name:'Anjuna',state:'Goa',tags:['beach','nightlife'],icon:'🏖️'},
+  {name:'Palolem',state:'Goa',tags:['beach'],icon:'🏖️'},
+  {name:'Havelock Island',state:'Andaman',tags:['beach','adventure'],icon:'🏝️'},
+  {name:'Neil Island',state:'Andaman',tags:['beach'],icon:'🏝️'},
+  {name:'Port Blair',state:'Andaman',tags:['beach','heritage'],icon:'🏝️'},
+  {name:'Kovalam',state:'Kerala',tags:['beach','wellness'],icon:'🏖️'},
+  {name:'Varkala',state:'Kerala',tags:['beach','spiritual'],icon:'🏖️'},
+  {name:'Alleppey',state:'Kerala',tags:['beach','nature'],icon:'🚤'},
+  {name:'Marari',state:'Kerala',tags:['beach'],icon:'🏖️'},
+  {name:'Mandvi',state:'Gujarat',tags:['beach'],icon:'🏖️'},
+  {name:'Gopalpur',state:'Odisha',tags:['beach'],icon:'🏖️'},
+  {name:'Puri',state:'Odisha',tags:['beach','spiritual'],icon:'🏖️'},
+  {name:'Gokarna',state:'Karnataka',tags:['beach','spiritual'],icon:'🏖️'},
+  {name:'Murudeshwar',state:'Karnataka',tags:['beach','spiritual'],icon:'🏖️'},
+  {name:'Tarkarli',state:'Maharashtra',tags:['beach','adventure'],icon:'🏖️'},
+  {name:'Alibaug',state:'Maharashtra',tags:['beach'],icon:'🏖️'},
+  {name:'Daman',state:'Daman & Diu',tags:['beach'],icon:'🏖️'},
+  {name:'Diu',state:'Daman & Diu',tags:['beach','heritage'],icon:'🏖️'},
+
+  // Hill Stations
+  {name:'Manali',state:'Himachal Pradesh',tags:['hill','adventure','nature'],icon:'🏔️'},
+  {name:'Shimla',state:'Himachal Pradesh',tags:['hill','heritage'],icon:'⛰️'},
+  {name:'Dharamsala',state:'Himachal Pradesh',tags:['hill','spiritual','culture'],icon:'🏔️'},
+  {name:'McLeod Ganj',state:'Himachal Pradesh',tags:['hill','spiritual'],icon:'🏔️'},
+  {name:'Kasol',state:'Himachal Pradesh',tags:['hill','adventure','nature'],icon:'🌲'},
+  {name:'Kufri',state:'Himachal Pradesh',tags:['hill','adventure'],icon:'⛷️'},
+  {name:'Dalhousie',state:'Himachal Pradesh',tags:['hill'],icon:'🌿'},
+  {name:'Khajjiar',state:'Himachal Pradesh',tags:['hill','nature'],icon:'🌿'},
+  {name:'Chail',state:'Himachal Pradesh',tags:['hill'],icon:'🌲'},
+  {name:'Spiti Valley',state:'Himachal Pradesh',tags:['hill','adventure','spiritual'],icon:'🏔️'},
+  {name:'Kaza',state:'Himachal Pradesh',tags:['hill','adventure'],icon:'🏔️'},
+  {name:'Bir Billing',state:'Himachal Pradesh',tags:['hill','adventure'],icon:'🪂'},
+  {name:'Sangla',state:'Himachal Pradesh',tags:['hill','nature'],icon:'🌿'},
+  {name:'Chitkul',state:'Himachal Pradesh',tags:['hill','nature'],icon:'🏔️'},
+  {name:'Mussoorie',state:'Uttarakhand',tags:['hill'],icon:'⛰️'},
+  {name:'Nainital',state:'Uttarakhand',tags:['hill','nature'],icon:'🏞️'},
+  {name:'Auli',state:'Uttarakhand',tags:['hill','adventure'],icon:'⛷️'},
+  {name:'Chopta',state:'Uttarakhand',tags:['hill','nature'],icon:'🌲'},
+  {name:'Lansdowne',state:'Uttarakhand',tags:['hill'],icon:'🌿'},
+  {name:'Ranikhet',state:'Uttarakhand',tags:['hill'],icon:'🌿'},
+  {name:'Munsiyari',state:'Uttarakhand',tags:['hill','adventure'],icon:'🏔️'},
+  {name:'Chakrata',state:'Uttarakhand',tags:['hill','nature'],icon:'🌲'},
+  {name:'Ooty',state:'Tamil Nadu',tags:['hill','nature'],icon:'🌄'},
+  {name:'Kodaikanal',state:'Tamil Nadu',tags:['hill','nature'],icon:'🌿'},
+  {name:'Yercaud',state:'Tamil Nadu',tags:['hill'],icon:'🌿'},
+  {name:'Valparai',state:'Tamil Nadu',tags:['hill','nature'],icon:'🌿'},
+  {name:'Munnar',state:'Kerala',tags:['hill','nature','tea'],icon:'🍵'},
+  {name:'Wayanad',state:'Kerala',tags:['hill','nature','adventure'],icon:'🌿'},
+  {name:'Coorg',state:'Karnataka',tags:['hill','nature','coffee'],icon:'☕'},
+  {name:'Chikmagalur',state:'Karnataka',tags:['hill','nature','coffee'],icon:'☕'},
+  {name:'Sakleshpur',state:'Karnataka',tags:['hill','nature'],icon:'🌿'},
+  {name:'Mahabaleshwar',state:'Maharashtra',tags:['hill'],icon:'🍓'},
+  {name:'Lonavala',state:'Maharashtra',tags:['hill'],icon:'⛰️'},
+  {name:'Matheran',state:'Maharashtra',tags:['hill'],icon:'🌿'},
+  {name:'Panchgani',state:'Maharashtra',tags:['hill'],icon:'🌿'},
+  {name:'Darjeeling',state:'West Bengal',tags:['hill','tea','heritage'],icon:'🍵'},
+  {name:'Kalimpong',state:'West Bengal',tags:['hill','culture'],icon:'🌸'},
+  {name:'Gangtok',state:'Sikkim',tags:['hill','culture','spiritual'],icon:'🏔️'},
+  {name:'Pelling',state:'Sikkim',tags:['hill','nature'],icon:'🏔️'},
+  {name:'Lachung',state:'Sikkim',tags:['hill','nature'],icon:'🏔️'},
+  {name:'Yumthang Valley',state:'Sikkim',tags:['hill','nature'],icon:'🌸'},
+
+  // Ladakh & North
+  {name:'Leh',state:'Ladakh',tags:['adventure','spiritual','culture'],icon:'🏔️'},
+  {name:'Nubra Valley',state:'Ladakh',tags:['adventure','nature'],icon:'🐪'},
+  {name:'Pangong Lake',state:'Ladakh',tags:['adventure','nature'],icon:'💙'},
+  {name:'Turtuk',state:'Ladakh',tags:['adventure'],icon:'🏔️'},
+  {name:'Hanle',state:'Ladakh',tags:['adventure','nature'],icon:'🔭'},
+  {name:'Zanskar',state:'Ladakh',tags:['adventure'],icon:'🏔️'},
+  {name:'Kargil',state:'Ladakh',tags:['heritage'],icon:'🏔️'},
+  {name:'Diskit',state:'Ladakh',tags:['spiritual'],icon:'🕌'},
+  {name:'Tawang',state:'Arunachal Pradesh',tags:['spiritual','hill','culture'],icon:'🏯'},
+  {name:'Ziro',state:'Arunachal Pradesh',tags:['nature','culture'],icon:'🌿'},
+  {name:'Mechuka',state:'Arunachal Pradesh',tags:['nature','adventure'],icon:'🌲'},
+  {name:'Bomdila',state:'Arunachal Pradesh',tags:['hill','spiritual'],icon:'⛰️'},
+
+  // Heritage & Culture
+  {name:'Jaipur',state:'Rajasthan',tags:['heritage','culture','food','shopping'],icon:'🏰'},
+  {name:'Udaipur',state:'Rajasthan',tags:['heritage','romance','culture'],icon:'💎'},
+  {name:'Jodhpur',state:'Rajasthan',tags:['heritage','culture'],icon:'🔵'},
+  {name:'Jaisalmer',state:'Rajasthan',tags:['heritage','adventure','desert'],icon:'🐪'},
+  {name:'Pushkar',state:'Rajasthan',tags:['spiritual','culture','heritage'],icon:'🕌'},
+  {name:'Bikaner',state:'Rajasthan',tags:['heritage','food'],icon:'🏰'},
+  {name:'Bundi',state:'Rajasthan',tags:['heritage'],icon:'🏯'},
+  {name:'Chittorgarh',state:'Rajasthan',tags:['heritage','history'],icon:'🏰'},
+  {name:'Kumbhalgarh',state:'Rajasthan',tags:['heritage','adventure'],icon:'🏰'},
+  {name:'Mount Abu',state:'Rajasthan',tags:['hill','spiritual'],icon:'⛰️'},
+  {name:'Mandawa',state:'Rajasthan',tags:['heritage','art'],icon:'🎨'},
+  {name:'Agra',state:'Uttar Pradesh',tags:['heritage','history'],icon:'🕌'},
+  {name:'Varanasi',state:'Uttar Pradesh',tags:['spiritual','culture','heritage'],icon:'🕯️'},
+  {name:'Lucknow',state:'Uttar Pradesh',tags:['heritage','food','culture'],icon:'🏛️'},
+  {name:'Mathura',state:'Uttar Pradesh',tags:['spiritual','heritage'],icon:'🛕'},
+  {name:'Vrindavan',state:'Uttar Pradesh',tags:['spiritual'],icon:'🛕'},
+  {name:'Ayodhya',state:'Uttar Pradesh',tags:['spiritual','heritage'],icon:'🛕'},
+  {name:'Fatehpur Sikri',state:'Uttar Pradesh',tags:['heritage','history'],icon:'🏯'},
+  {name:'Hampi',state:'Karnataka',tags:['heritage','history','culture'],icon:'🗿'},
+  {name:'Badami',state:'Karnataka',tags:['heritage','history'],icon:'🏛️'},
+  {name:'Mysuru',state:'Karnataka',tags:['heritage','culture'],icon:'🏯'},
+  {name:'Belur',state:'Karnataka',tags:['heritage','spiritual'],icon:'🛕'},
+  {name:'Halebidu',state:'Karnataka',tags:['heritage'],icon:'🏛️'},
+  {name:'Bidar',state:'Karnataka',tags:['heritage'],icon:'🏰'},
+  {name:'Khajuraho',state:'Madhya Pradesh',tags:['heritage','history'],icon:'🏛️'},
+  {name:'Sanchi',state:'Madhya Pradesh',tags:['heritage','spiritual'],icon:'🛕'},
+  {name:'Orchha',state:'Madhya Pradesh',tags:['heritage','spiritual'],icon:'🏯'},
+  {name:'Gwalior',state:'Madhya Pradesh',tags:['heritage','history'],icon:'🏰'},
+  {name:'Mandu',state:'Madhya Pradesh',tags:['heritage','romance'],icon:'🏯'},
+  {name:'Bhimbetka',state:'Madhya Pradesh',tags:['heritage','history'],icon:'🗿'},
+  {name:'Ajanta Ellora',state:'Maharashtra',tags:['heritage','history','spiritual'],icon:'🏛️'},
+  {name:'Aurangabad',state:'Maharashtra',tags:['heritage','history'],icon:'🏯'},
+  {name:'Kolhapur',state:'Maharashtra',tags:['heritage','spiritual'],icon:'🏰'},
+  {name:'Mahabalipuram',state:'Tamil Nadu',tags:['heritage','beach','history'],icon:'🏛️'},
+  {name:'Thanjavur',state:'Tamil Nadu',tags:['heritage','culture','spiritual'],icon:'🛕'},
+  {name:'Madurai',state:'Tamil Nadu',tags:['spiritual','heritage','culture'],icon:'🛕'},
+  {name:'Kanchipuram',state:'Tamil Nadu',tags:['spiritual','heritage'],icon:'🛕'},
+  {name:'Chettinad',state:'Tamil Nadu',tags:['heritage','food','culture'],icon:'🏛️'},
+  {name:'Warangal',state:'Telangana',tags:['heritage','history'],icon:'🏰'},
+  {name:'Hyderabad',state:'Telangana',tags:['heritage','food','culture'],icon:'🍖'},
+  {name:'Puri',state:'Odisha',tags:['spiritual','beach','heritage'],icon:'🛕'},
+  {name:'Konark',state:'Odisha',tags:['heritage','history'],icon:'🌞'},
+  {name:'Bhubaneswar',state:'Odisha',tags:['heritage','spiritual'],icon:'🛕'},
+  {name:'Nalanda',state:'Bihar',tags:['heritage','history'],icon:'📚'},
+  {name:'Bodh Gaya',state:'Bihar',tags:['spiritual','heritage'],icon:'🧘'},
+  {name:'Rajgir',state:'Bihar',tags:['spiritual','heritage'],icon:'⛰️'},
+  {name:'Patna',state:'Bihar',tags:['heritage','history'],icon:'🏛️'},
+  {name:'Lepakshi',state:'Andhra Pradesh',tags:['heritage','spiritual'],icon:'🛕'},
+  {name:'Tirupati',state:'Andhra Pradesh',tags:['spiritual'],icon:'🛕'},
+  {name:'Amritsar',state:'Punjab',tags:['spiritual','heritage','food'],icon:'✨'},
+  {name:'Kurukshetra',state:'Haryana',tags:['spiritual','heritage'],icon:'🛕'},
+  {name:'Kohima',state:'Nagaland',tags:['heritage','culture'],icon:'🎭'},
+
+  // Spiritual
+  {name:'Rishikesh',state:'Uttarakhand',tags:['spiritual','adventure','wellness'],icon:'🧘'},
+  {name:'Haridwar',state:'Uttarakhand',tags:['spiritual'],icon:'🔱'},
+  {name:'Kedarnath',state:'Uttarakhand',tags:['spiritual','adventure'],icon:'🛕'},
+  {name:'Badrinath',state:'Uttarakhand',tags:['spiritual'],icon:'🛕'},
+  {name:'Srinagar',state:'Jammu & Kashmir',tags:['nature','heritage','romance'],icon:'🌷'},
+  {name:'Gulmarg',state:'Jammu & Kashmir',tags:['hill','adventure','nature'],icon:'⛷️'},
+  {name:'Pahalgam',state:'Jammu & Kashmir',tags:['nature','adventure'],icon:'🌿'},
+  {name:'Sonamarg',state:'Jammu & Kashmir',tags:['nature','adventure'],icon:'🏔️'},
+  {name:'Vaishno Devi',state:'Jammu & Kashmir',tags:['spiritual'],icon:'🛕'},
+  {name:'Dwarka',state:'Gujarat',tags:['spiritual'],icon:'🛕'},
+  {name:'Somnath',state:'Gujarat',tags:['spiritual','heritage'],icon:'🛕'},
+  {name:'Palitana',state:'Gujarat',tags:['spiritual'],icon:'🛕'},
+  {name:'Shirdi',state:'Maharashtra',tags:['spiritual'],icon:'🛕'},
+  {name:'Nashik',state:'Maharashtra',tags:['spiritual','wine'],icon:'🍷'},
+  {name:'Kanyakumari',state:'Tamil Nadu',tags:['spiritual','beach'],icon:'🌊'},
+  {name:'Rameswaram',state:'Tamil Nadu',tags:['spiritual','beach'],icon:'🛕'},
+  {name:'Pondicherry',state:'Tamil Nadu',tags:['spiritual','beach','culture'],icon:'🌊'},
+  {name:'Eklingji Temple',state:'Rajasthan',tags:['spiritual'],icon:'🛕'},
+
+  // Nature & Wildlife
+  {name:'Jim Corbett',state:'Uttarakhand',tags:['nature','wildlife','adventure'],icon:'🐯'},
+  {name:'Kaziranga',state:'Assam',tags:['nature','wildlife'],icon:'🦏'},
+  {name:'Ranthambore',state:'Rajasthan',tags:['nature','wildlife','heritage'],icon:'🐯'},
+  {name:'Kanha',state:'Madhya Pradesh',tags:['nature','wildlife'],icon:'🐯'},
+  {name:'Bandhavgarh',state:'Madhya Pradesh',tags:['nature','wildlife'],icon:'🐯'},
+  {name:'Pench',state:'Madhya Pradesh',tags:['nature','wildlife'],icon:'🐯'},
+  {name:'Tadoba',state:'Maharashtra',tags:['nature','wildlife'],icon:'🐯'},
+  {name:'Kabini',state:'Karnataka',tags:['nature','wildlife'],icon:'🐘'},
+  {name:'Nagarhole',state:'Karnataka',tags:['nature','wildlife'],icon:'🐆'},
+  {name:'Mudumalai',state:'Tamil Nadu',tags:['nature','wildlife'],icon:'🐘'},
+  {name:'Periyar',state:'Kerala',tags:['nature','wildlife'],icon:'🐘'},
+  {name:'Sundarbans',state:'West Bengal',tags:['nature','wildlife'],icon:'🐯'},
+  {name:'Dudhwa',state:'Uttar Pradesh',tags:['nature','wildlife'],icon:'🦌'},
+  {name:'Bhitarkanika',state:'Odisha',tags:['nature','wildlife'],icon:'🐊'},
+  {name:'Simlipal',state:'Odisha',tags:['nature','wildlife'],icon:'🐯'},
+  {name:'Manas',state:'Assam',tags:['nature','wildlife'],icon:'🦏'},
+  {name:'Chilika Lake',state:'Odisha',tags:['nature','wildlife'],icon:'🦅'},
+  {name:'Loktak Lake',state:'Manipur',tags:['nature'],icon:'🌊'},
+  {name:'Majuli',state:'Assam',tags:['nature','culture'],icon:'🌿'},
+  {name:'Valley of Flowers',state:'Uttarakhand',tags:['nature','adventure'],icon:'🌸'},
+  {name:'Roopkund',state:'Uttarakhand',tags:['adventure','nature'],icon:'🏔️'},
+  {name:'Jog Falls',state:'Karnataka',tags:['nature'],icon:'💦'},
+  {name:'Athirappilly',state:'Kerala',tags:['nature'],icon:'💦'},
+  {name:'Dudhsagar',state:'Goa',tags:['nature','adventure'],icon:'💦'},
+  {name:'Nohkalikai',state:'Meghalaya',tags:['nature'],icon:'💦'},
+  {name:'Cherrapunji',state:'Meghalaya',tags:['nature','adventure'],icon:'🌧️'},
+  {name:'Shillong',state:'Meghalaya',tags:['hill','culture','nature'],icon:'⛰️'},
+  {name:'Mawlynnong',state:'Meghalaya',tags:['nature'],icon:'🌿'},
+  {name:'Dawki',state:'Meghalaya',tags:['nature','adventure'],icon:'🚣'},
+  {name:'Dzukou Valley',state:'Nagaland',tags:['nature','adventure'],icon:'🌸'},
+  {name:'Dooars',state:'West Bengal',tags:['nature','wildlife'],icon:'🌿'},
+  {name:'Barnawapara',state:'Chhattisgarh',tags:['nature','wildlife'],icon:'🌿'},
+  {name:'Chitrakote',state:'Chhattisgarh',tags:['nature'],icon:'💦'},
+  {name:'Phawngpui',state:'Mizoram',tags:['nature','adventure'],icon:'🏔️'},
+
+  // Adventure
+  {name:'Rishikesh',state:'Uttarakhand',tags:['adventure','spiritual','wellness'],icon:'🚣'},
+  {name:'Bir Billing',state:'Himachal Pradesh',tags:['adventure'],icon:'🪂'},
+  {name:'Dandeli',state:'Karnataka',tags:['adventure','nature'],icon:'🌊'},
+  {name:'Coorg',state:'Karnataka',tags:['adventure','nature','coffee'],icon:'☕'},
+  {name:'Netarhat',state:'Jharkhand',tags:['hill','nature'],icon:'🌄'},
+  {name:'Pachmarhi',state:'Madhya Pradesh',tags:['hill','nature','adventure'],icon:'⛰️'},
+  {name:'Bhandardara',state:'Maharashtra',tags:['nature','adventure'],icon:'💦'},
+  {name:'Igatpuri',state:'Maharashtra',tags:['hill','nature'],icon:'🌿'},
+  {name:'Malshej Ghat',state:'Maharashtra',tags:['nature','adventure'],icon:'🌧️'},
+  {name:'Sandakphu',state:'West Bengal',tags:['adventure','hill'],icon:'🏔️'},
+  {name:'Dzongri',state:'Sikkim',tags:['adventure','hill'],icon:'🏔️'},
+  {name:'Yuksom',state:'Sikkim',tags:['adventure','spiritual'],icon:'🌿'},
+  {name:'Zuluk',state:'Sikkim',tags:['adventure','nature'],icon:'🏔️'},
+  {name:'Pasighat',state:'Arunachal Pradesh',tags:['adventure','nature'],icon:'🌊'},
+  {name:'Along',state:'Arunachal Pradesh',tags:['adventure'],icon:'🌿'},
+
+  // Metros & Cities
+  {name:'Mumbai',state:'Maharashtra',tags:['culture','food','nightlife','shopping'],icon:'🏙️'},
+  {name:'Delhi',state:'Delhi',tags:['heritage','food','culture','shopping'],icon:'🕌'},
+  {name:'Kolkata',state:'West Bengal',tags:['heritage','food','culture'],icon:'🌁'},
+  {name:'Chennai',state:'Tamil Nadu',tags:['heritage','food','beach'],icon:'🏙️'},
+  {name:'Bengaluru',state:'Karnataka',tags:['culture','food','nightlife'],icon:'🌳'},
+  {name:'Pune',state:'Maharashtra',tags:['culture','food','heritage'],icon:'🏛️'},
+  {name:'Ahmedabad',state:'Gujarat',tags:['heritage','food','culture'],icon:'🏛️'},
+  {name:'Visakhapatnam',state:'Andhra Pradesh',tags:['beach','nature'],icon:'🌊'},
+  {name:'Coimbatore',state:'Tamil Nadu',tags:['culture','food'],icon:'🌿'},
+  {name:'Kochi',state:'Kerala',tags:['heritage','food','culture','beach'],icon:'🌴'},
+  {name:'Guwahati',state:'Assam',tags:['culture','nature'],icon:'🌿'},
+  {name:'Imphal',state:'Manipur',tags:['heritage','culture'],icon:'🎭'},
+  {name:'Agartala',state:'Tripura',tags:['heritage','culture'],icon:'🏯'},
+  {name:'Aizawl',state:'Mizoram',tags:['culture'],icon:'⛰️'},
+  {name:'Dimapur',state:'Nagaland',tags:['culture'],icon:'🌿'},
+
+  // Unique / Offbeat
+  {name:'Rann of Kutch',state:'Gujarat',tags:['nature','culture','adventure'],icon:'🌅'},
+  {name:'Gir Forest',state:'Gujarat',tags:['wildlife','nature'],icon:'🦁'},
+  {name:'Lothal',state:'Gujarat',tags:['heritage','history'],icon:'🏛️'},
+  {name:'Champaner',state:'Gujarat',tags:['heritage'],icon:'🏯'},
+  {name:'Saputara',state:'Gujarat',tags:['hill','nature'],icon:'🌿'},
+  {name:'Araku Valley',state:'Andhra Pradesh',tags:['nature','hill'],icon:'☕'},
+  {name:'Horsley Hills',state:'Andhra Pradesh',tags:['hill','nature'],icon:'⛰️'},
+  {name:'Nagarjunasagar',state:'Andhra Pradesh',tags:['heritage','nature'],icon:'🏛️'},
+  {name:'Ukhrul',state:'Manipur',tags:['nature','adventure'],icon:'🌸'},
+  {name:'Unakoti',state:'Tripura',tags:['heritage','spiritual'],icon:'🗿'},
+  {name:'Neermahal',state:'Tripura',tags:['heritage'],icon:'🏰'},
+  {name:'Sepahijala',state:'Tripura',tags:['nature','wildlife'],icon:'🌿'},
+  {name:'Jampui Hills',state:'Tripura',tags:['hill','nature'],icon:'🌸'},
+  {name:'Champhai',state:'Mizoram',tags:['nature'],icon:'🌿'},
+  {name:'Tam Dil',state:'Mizoram',tags:['nature'],icon:'🌊'},
+  {name:'Khonoma',state:'Nagaland',tags:['culture','nature'],icon:'🌿'},
+  {name:'Mokokchung',state:'Nagaland',tags:['culture'],icon:'🎭'},
+  {name:'Lava',state:'West Bengal',tags:['hill','nature'],icon:'🌿'},
+  {name:'Lolegaon',state:'West Bengal',tags:['hill','nature'],icon:'🌿'},
+  {name:'Bishnupur',state:'West Bengal',tags:['heritage','culture'],icon:'🏯'},
+  {name:'Chanderi',state:'Madhya Pradesh',tags:['heritage'],icon:'🏰'},
+  {name:'Shivpuri',state:'Madhya Pradesh',tags:['heritage','nature'],icon:'🌿'},
+  {name:'Amarkantak',state:'Madhya Pradesh',tags:['spiritual','nature'],icon:'🌿'},
+  {name:'Bastar',state:'Chhattisgarh',tags:['culture','nature'],icon:'🌿'},
+  {name:'Mainpat',state:'Chhattisgarh',tags:['hill','nature'],icon:'⛰️'},
+  {name:'Sirpur',state:'Chhattisgarh',tags:['heritage'],icon:'🏛️'},
+  {name:'Jagdalpur',state:'Chhattisgarh',tags:['nature','culture'],icon:'🌿'},
+  {name:'Betla',state:'Jharkhand',tags:['nature','wildlife'],icon:'🐘'},
+  {name:'Deoghar',state:'Jharkhand',tags:['spiritual'],icon:'🛕'},
+  {name:'Ranchi',state:'Jharkhand',tags:['nature'],icon:'💦'},
+  {name:'Haflong',state:'Assam',tags:['hill','nature'],icon:'⛰️'},
+  {name:'Tezpur',state:'Assam',tags:['heritage','nature'],icon:'🌿'},
+  {name:'Jorhat',state:'Assam',tags:['tea','culture'],icon:'🍵'},
+  {name:'Sualkuchi',state:'Assam',tags:['culture'],icon:'🧵'},
+  {name:'Sibsagar',state:'Assam',tags:['heritage'],icon:'🏛️'},
+  {name:'Kavaratti',state:'Lakshadweep',tags:['beach','nature'],icon:'🏝️'},
+  {name:'Agatti',state:'Lakshadweep',tags:['beach','adventure'],icon:'🏝️'},
+  {name:'Bangaram',state:'Lakshadweep',tags:['beach'],icon:'🏝️'},
+  {name:'Minicoy',state:'Lakshadweep',tags:['beach','culture'],icon:'🏝️'},
+  {name:'Baratang',state:'Andaman',tags:['nature','adventure'],icon:'🦜'},
+  {name:'Diglipur',state:'Andaman',tags:['nature','adventure'],icon:'🌊'},
+  {name:'Vagator',state:'Goa',tags:['beach','nightlife'],icon:'🏖️'},
+  {name:'Arambol',state:'Goa',tags:['beach'],icon:'🏖️'},
+  {name:'Patnitop',state:'Jammu & Kashmir',tags:['hill','nature'],icon:'⛰️'},
+  {name:'Doodhpathri',state:'Jammu & Kashmir',tags:['nature'],icon:'🌿'},
+  {name:'Namdapha',state:'Arunachal Pradesh',tags:['nature','wildlife'],icon:'🌿'},
+  {name:'Dirang',state:'Arunachal Pradesh',tags:['hill','nature'],icon:'⛰️'},
+  {name:'Anandpur Sahib',state:'Punjab',tags:['spiritual','heritage'],icon:'✨'},
+  {name:'Patiala',state:'Punjab',tags:['heritage','food'],icon:'🏰'},
+  {name:'Bathinda',state:'Punjab',tags:['heritage'],icon:'🏰'},
+  {name:'Morni Hills',state:'Haryana',tags:['hill','nature'],icon:'🌿'},
+  {name:'Bharatpur',state:'Rajasthan',tags:['nature','wildlife'],icon:'🦅'},
+  {name:'Sawai Madhopur',state:'Rajasthan',tags:['wildlife'],icon:'🐯'},
+  {name:'Alwar',state:'Rajasthan',tags:['heritage','nature'],icon:'🏰'},
+  {name:'Shekhawati',state:'Rajasthan',tags:['heritage','art'],icon:'🎨'},
+  {name:'Tonk',state:'Rajasthan',tags:['heritage'],icon:'🏯'},
+  {name:'Ajmer',state:'Rajasthan',tags:['spiritual','heritage'],icon:'🕌'},
+  {name:'Pinjore',state:'Haryana',tags:['heritage','nature'],icon:'🌿'},
+  {name:'Sultanpur',state:'Haryana',tags:['nature','wildlife'],icon:'🦅'},
+  {name:'Medak',state:'Telangana',tags:['heritage'],icon:'🏛️'},
+  {name:'Bhongir',state:'Telangana',tags:['heritage'],icon:'🏰'},
+  {name:'Karimnagar',state:'Telangana',tags:['heritage'],icon:'🏛️'},
+  {name:'Ramappa',state:'Telangana',tags:['heritage'],icon:'🛕'},
+  {name:'Cuttack',state:'Odisha',tags:['heritage'],icon:'🏛️'},
+  {name:'Rayagada',state:'Odisha',tags:['culture','nature'],icon:'🌿'},
+  {name:'Daringbadi',state:'Odisha',tags:['hill','nature'],icon:'🌿'},
+  {name:'Visakhpatnam',state:'Andhra Pradesh',tags:['beach','nature'],icon:'🌊'},
+  {name:'Srikalahasti',state:'Andhra Pradesh',tags:['spiritual'],icon:'🛕'},
+  {name:'Vikramshila',state:'Bihar',tags:['heritage','history'],icon:'📚'},
+  {name:'Pawapuri',state:'Bihar',tags:['spiritual'],icon:'🛕'},
+  {name:'Vaishali',state:'Bihar',tags:['heritage','spiritual'],icon:'🏛️'},
+  {name:'Madhubani',state:'Bihar',tags:['culture','art'],icon:'🎨'},
+  {name:'Fatehgarh Sahib',state:'Punjab',tags:['spiritual'],icon:'✨'},
+  {name:'Wagah Border',state:'Punjab',tags:['heritage','culture'],icon:'🇮🇳'},
+  {name:'Nagda Temple',state:'Rajasthan',tags:['spiritual','heritage'],icon:'🛕'},
+  {name:'Haldighati',state:'Rajasthan',tags:['heritage','history'],icon:'⚔️'},
+  {name:'Jaisalmer Desert Camp',state:'Rajasthan',tags:['adventure','desert'],icon:'🐪'},
+  {name:'Corbett Falls',state:'Uttarakhand',tags:['nature'],icon:'💦'},
+  {name:'Binsar',state:'Uttarakhand',tags:['hill','nature'],icon:'🌲'},
+  {name:'Chaukori',state:'Uttarakhand',tags:['hill','nature'],icon:'🌿'},
+  {name:'Ravangla',state:'Sikkim',tags:['hill','spiritual'],icon:'🏔️'},
+  {name:'Namchi',state:'Sikkim',tags:['spiritual','culture'],icon:'🛕'},
+  {name:'Nongriat',state:'Meghalaya',tags:['nature','adventure'],icon:'🌿'},
+  {name:'Laitlum',state:'Meghalaya',tags:['nature'],icon:'🌄'},
+  {name:'Mawsynram',state:'Meghalaya',tags:['nature'],icon:'🌧️'},
+  {name:'Agartala',state:'Tripura',tags:['heritage','culture'],icon:'🏯'},
+  {name:'Aizawl',state:'Mizoram',tags:['culture'],icon:'⛰️'},
+  {name:'Reiek',state:'Mizoram',tags:['nature','adventure'],icon:'🌿'},
+  {name:'Phawngpui',state:'Mizoram',tags:['nature'],icon:'🏔️'},
+  {name:'Imphal',state:'Manipur',tags:['culture','heritage'],icon:'🎭'},
+  {name:'Moirang',state:'Manipur',tags:['heritage'],icon:'🏛️'},
+  {name:'Moreh',state:'Manipur',tags:['culture'],icon:'🌿'},
+];
+
+// Category filter map
+const CAT_TAGS = {
+  beach: ['beach'],
+  hill: ['hill'],
+  heritage: ['heritage','history'],
+  nature: ['nature','wildlife'],
+  spiritual: ['spiritual'],
+  adventure: ['adventure'],
+};
+
+// ── Search logic ──────────────────────────────────────────────────────────
+let filteredDests = [...INDIA_DESTINATIONS];
+let ddItems       = [];
+
+function filterQuickCat(cat, btn) {
+  activeQuickCat = cat;
+  document.querySelectorAll('.quick-cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const input = document.getElementById('destSearchInput');
+  onDestSearch(input.value);
+  showDropdown();
+  input.focus();
+}
+
+function getFilteredByQuery(query) {
+  let pool = INDIA_DESTINATIONS;
+  if (activeQuickCat !== 'all') {
+    const catTags = CAT_TAGS[activeQuickCat] || [];
+    pool = pool.filter(d => d.tags.some(t => catTags.includes(t)));
+  }
+  if (!query.trim()) {
+    // Show popular destinations or category top picks
+    return pool.slice(0, 20);
+  }
+  const q = query.toLowerCase();
+  return pool.filter(d =>
+    d.name.toLowerCase().includes(q) ||
+    d.state.toLowerCase().includes(q) ||
+    d.tags.some(t => t.includes(q))
+  ).slice(0, 12);
+}
+
+function onDestSearch(val) {
+  const clearBtn = document.getElementById('searchClearBtn');
+  clearBtn.style.display = val ? 'block' : 'none';
+  showDropdown(val);
+}
+
+function showDropdown(query = '') {
+  const dd = document.getElementById('destDropdown');
+  query = query || document.getElementById('destSearchInput').value;
+  ddItems = getFilteredByQuery(query);
+  ddFocusIdx = -1;
+
+  if (ddItems.length === 0) {
+    dd.innerHTML = '<div class="dd-no-results">No destinations found. Try a different name.</div>';
+  } else {
+    const label = !query.trim()
+      ? (activeQuickCat === 'all' ? '🔥 Popular Destinations' : `✨ ${activeQuickCat.charAt(0).toUpperCase()+activeQuickCat.slice(1)} Destinations`)
+      : `🔍 Results for "${query}"`;
+    dd.innerHTML = `<div class="dd-section-title">${label}</div>` +
+      ddItems.map((d, i) => {
+        const alreadySelected = myDestPicks.some(p => p.name === d.name);
+        return `<div class="dd-item${alreadySelected ? ' focused' : ''}" onclick="selectDest('${d.name}')" data-idx="${i}">
+          <img class="dd-item-img" src="${getDestImage(d.name)}" onerror="this.src='https://images.unsplash.com/photo-1488085061387-422e29b40080?w=80&q=60'" alt="${d.name}"/>
+          <div class="dd-item-info">
+            <div class="dd-item-name">${highlight(d.name, query)}</div>
+            <div class="dd-item-state">${d.state} · ${d.tags.slice(0,2).join(', ')}</div>
+          </div>
+          <span class="dd-item-icon">${alreadySelected ? '✓' : d.icon}</span>
+        </div>`;
+      }).join('');
+  }
+
+  dd.classList.add('open');
+}
+
+function highlight(text, query) {
+  if (!query.trim()) return text;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
+  return text.slice(0, idx) +
+    `<span style="color:var(--accent-1);font-weight:800;">${text.slice(idx, idx+query.length)}</span>` +
+    text.slice(idx + query.length);
+}
+
+function onDestSearchKey(e) {
+  const dd = document.getElementById('destDropdown');
+  const items = dd.querySelectorAll('.dd-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    ddFocusIdx = Math.min(ddFocusIdx + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('focused', i === ddFocusIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    ddFocusIdx = Math.max(ddFocusIdx - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('focused', i === ddFocusIdx));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (ddFocusIdx >= 0 && ddItems[ddFocusIdx]) {
+      selectDest(ddItems[ddFocusIdx].name);
+    } else if (e.target.value.trim()) {
+      // Add custom
+      const custom = e.target.value.trim();
+      selectDest(custom, true);
+    }
+  } else if (e.key === 'Escape') {
+    hideDropdown();
+  }
+}
+
+function selectDest(name, isCustom = false) {
+  if (myDestPicks.some(p => p.name === name)) {
+    // Already selected — deselect
+    myDestPicks = myDestPicks.filter(p => p.name !== name);
+    renderChips();
+    showDropdown(document.getElementById('destSearchInput').value);
+    return;
+  }
+  if (myDestPicks.length >= 3) {
+    showToast('Max 3 destinations — remove one first', 'error');
+    return;
+  }
+  const destData = INDIA_DESTINATIONS.find(d => d.name === name) ||
+    {name, state: 'India', tags: ['travel'], icon: '📍'};
+  myDestPicks.push(destData);
+  renderChips();
+  showDropdown(document.getElementById('destSearchInput').value);
+  showToast(`${name} added! ${destData.icon}`);
+}
+
+function removeDestPick(name) {
+  myDestPicks = myDestPicks.filter(p => p.name !== name);
+  renderChips();
+  // Refresh dropdown to uncheck
+  showDropdown(document.getElementById('destSearchInput').value);
+}
+
+function renderChips() {
+  const container = document.getElementById('selectedChips');
+  const countEl   = document.getElementById('selCount');
+  countEl.textContent = `(${myDestPicks.length}/3)`;
+
+  if (myDestPicks.length === 0) {
+    container.innerHTML = '<span class="sel-empty-hint">No destinations selected yet — search above ↑</span>';
+    return;
+  }
+
+  container.innerHTML = myDestPicks.map((d, i) => {
+    const rank = i === 0 ? '1st' : i === 1 ? '2nd' : '3rd';
+    return `<div class="sel-chip">
+      <span class="sel-chip-rank">${i+1}</span>
+      <img src="${getDestImage(d.name)}" onerror="this.style.display='none'" alt="${d.name}"/>
+      ${d.name}
+      <span style="font-size:.7rem;color:rgba(108,99,255,.6);margin-left:2px;">(${rank} choice)</span>
+      <button class="sel-chip-remove" onclick="removeDestPick('${d.name}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function clearSearch() {
+  const input = document.getElementById('destSearchInput');
+  input.value = '';
+  document.getElementById('searchClearBtn').style.display = 'none';
+  showDropdown('');
+}
+
+function hideDropdown() {
+  document.getElementById('destDropdown').classList.remove('open');
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', function(e) {
+  if (!document.getElementById('destSearchWrapper')?.contains(e.target)) {
+    hideDropdown();
+  }
+});
+
+// ── Survey navigation ──────────────────────────────────────────────────────
+function selOne(gridId, el) {
+  document.querySelectorAll(`#${gridId} .opt-card`).forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function surveyNext(step) {
+  if (step === 2) {
+    if (myDestPicks.length === 0) { showToast('Pick at least 1 destination', 'error'); return; }
+  }
+  if (step === 3) {
+    if (!document.querySelector('#budgetGrid .opt-card.sel')) { showToast('Select a budget', 'error'); return; }
+  }
+  hideDropdown();
+  document.querySelectorAll('.survey-step').forEach(s => s.classList.remove('active'));
+  document.getElementById(`ss${step}`).classList.add('active');
+  for (let i = 1; i <= 3; i++) {
+    const dot = document.getElementById(`sv${i}`);
+    dot.className = 's-dot' + (i < step ? ' done' : i === step ? ' active' : '');
+  }
+}
+
+// ── Submit survey ──────────────────────────────────────────────────────────
+async function submitSurveyAndProceed() {
+  if (!document.querySelector('#accomGrid .opt-card.sel')) { showToast('Select accommodation', 'error'); return; }
+  if (!document.querySelector('#foodGrid .opt-card.sel'))  { showToast('Select food preference', 'error'); return; }
+
+  const btn = document.getElementById('surveySubmitBtn');
+  btn.disabled    = true;
+  btn.textContent = 'Saving...';
+
+  const styles        = [...document.querySelectorAll('#styleGrid .opt-card.sel')].map(c => c.dataset.val);
+  const budget        = document.querySelector('#budgetGrid .opt-card.sel')?.dataset.val || 'medium';
+  const duration      = parseInt(document.getElementById('durationInput').value || '7');
+  const month         = document.getElementById('monthSelect').value;
+  const accommodation = document.querySelector('#accomGrid .opt-card.sel')?.dataset.val || 'hotel';
+  const foodPref      = document.querySelector('#foodGrid .opt-card.sel')?.dataset.val  || 'both';
+
+  try {
+    await fetch(`${API_BASE}/auth/preferences/${currentUser.user_id}`, {
+      method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ travel_preferences: { budget, travel_styles: styles, trip_duration: duration, accommodation, food_pref: foodPref }})
+    });
+  } catch(e) {}
+
+  window._surveyData = {
+    destinations:  myDestPicks.map(d => d.name),
+    travel_style:  styles, budget, duration, month, accommodation, food_pref: foodPref
+  };
+
+  // Save custom destinations
+  const knownNames = INDIA_DESTINATIONS.map(d => d.name);
+  const customDests = myDestPicks.map(d => d.name).filter(n => !knownNames.includes(n));
+  if (customDests.length > 0) {
+    try {
+      await fetch(`${API_BASE}/vote/custom-destinations`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ group_id: groupId, user_name: currentUser.name, destinations: customDests })
+      });
+    } catch(e) {}
+  }
+
+  document.getElementById('surveySection').style.display = 'none';
+  document.getElementById('votingSection').style.display = 'block';
+  renderVoteCards();
+
+  showToast('Preferences saved! Now vote 🗳️');
+  btn.disabled    = false;
+  btn.textContent = 'Save & Vote on Destinations →';
+}
+
+// ── Vote cards ─────────────────────────────────────────────────────────────
+function renderVoteCards() {
+  const list = document.getElementById('voteCardList');
+  if (!list) return;
+  const displayDests = myDestPicks.length > 0 ? myDestPicks.map(d => d.name) : destinations.map(d => d.name || d);
+  if (displayDests.length === 0) {
+    list.innerHTML = '<div class="empty-dest">No destinations to vote on.</div>';
+    return;
+  }
+  list.innerHTML = displayDests.map(name => {
+    const mv = myVotes[name] || null;
+    return `<div class="dest-card">
+      <img class="dest-card-img" src="${getDestImage(name)}" alt="${name}" onerror="this.src='${getDestImage('default')}'"/>
+      <div class="dest-card-info">
+        <div class="dest-card-name">${name}</div>
+        <div class="dest-card-desc">${getDestDesc(name)}</div>
+      </div>
+      <div class="dest-card-votes">
+        <button class="vote-btn up ${mv === 'up' ? 'voted' : ''}" onclick="castVote('${name}', 'up')">👍</button>
+        <span class="vote-count">${mv === 'up' ? '✓' : '—'}</span>
+        <button class="vote-btn down ${mv === 'down' ? 'voted' : ''}" onclick="castVote('${name}', 'down')">👎</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function castVote(name, dir) {
+  myVotes[name] = myVotes[name] === dir ? null : dir;
+  if (!myVotes[name]) delete myVotes[name];
+  renderVoteCards();
+}
+
+// ── Submit final vote ──────────────────────────────────────────────────────
+async function submitVote() {
+  const surveyData  = window._surveyData || {};
+  const likedDests  = (surveyData.destinations || []).filter(d => myVotes[d] !== 'down');
+  const rankedDests = likedDests.length > 0 ? likedDests : (surveyData.destinations || []);
+  if (rankedDests.length === 0) { showToast('Please 👍 at least one destination', 'error'); return; }
+
+  const preferences = {
+    destinations: rankedDests, travel_style: surveyData.travel_style || [],
+    budget: surveyData.budget || 'medium', duration: surveyData.duration || 7,
+    month: surveyData.month || 'December', accommodation: surveyData.accommodation || 'hotel',
+    food_pref: surveyData.food_pref || 'both', raw_votes: myVotes
+  };
+
+  const btn = document.getElementById('submitVoteBtn');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+
+  try {
+    const res  = await fetch(`${API_BASE}/vote/submit`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ group_id: groupId, user_id: currentUser.user_id || '', user_name: currentUser.name, preferences })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Vote submitted! 🎉');
+      if (data.all_voted) setTimeout(() => window.location.href = 'results.html', 1200);
+      else setTimeout(() => window.location.reload(), 1200);
+    } else {
+      showToast(data.error || 'Error submitting', 'error');
+      btn.disabled = false; btn.textContent = 'Submit My Vote ✈';
+    }
+  } catch(e) {
+    showToast('Cannot connect to server', 'error');
+    btn.disabled = false; btn.textContent = 'Submit My Vote ✈';
+  }
+}
+
+// ── Creator: destination management ───────────────────────────────────────
+function renderDestCards() {
+  hideAll();
+  document.getElementById('addDestSection').style.display = 'block';
+  const list = document.getElementById('destCardList');
+  const btn  = document.getElementById('openVotingBtn');
+  if (destinations.length === 0) {
+    list.innerHTML = `<div class="empty-dest"><div style="font-size:2.5rem;margin-bottom:10px;">🗺️</div><div style="font-weight:700;">No destinations yet</div><div style="font-size:.83rem;margin-top:4px;">Add the first one above!</div></div>`;
+    if (btn) btn.style.display = 'none'; return;
+  }
+  if (btn) btn.style.display = destinations.length >= 2 ? 'flex' : 'none';
+  list.innerHTML = destinations.map((d, i) => {
+    const name = d.name || d;
+    return `<div class="dest-card">
+      <img class="dest-card-img" src="${getDestImage(name)}" alt="${name}"/>
+      <div class="dest-card-info">
+        <div class="dest-card-name">${name}</div>
+        <div class="dest-card-desc">${getDestDesc(name)}</div>
+      </div>
+      <button class="dest-card-delete" onclick="removeDestination(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function addDestination() {
+  const input = document.getElementById('newDestInput');
+  const name  = input.value.trim();
+  if (!name) { showToast('Enter a destination name', 'error'); return; }
+  const existing = destinations.find(d => (d.name || d).toLowerCase() === name.toLowerCase());
+  if (existing) { showToast('Already added!', 'error'); return; }
+  try {
+    const res  = await fetch(`${API_BASE}/group/${groupId}/destinations/add`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name, added_by: currentUser.name })
+    });
+    const data = await res.json();
+    if (data.success) { destinations = data.destinations; input.value = ''; renderDestCards(); showToast(`${name} added! ✈`); }
+    else showToast(data.error || 'Failed to add', 'error');
+  } catch(e) { showToast('Cannot connect to server', 'error'); }
+}
+
+async function removeDestination(index) {
+  const dest = destinations[index]; if (!dest) return;
+  const name = dest.name || dest;
+  try {
+    const res  = await fetch(`${API_BASE}/group/${groupId}/destinations/remove`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name })
+    });
+    const data = await res.json();
+    if (data.success) { destinations = data.destinations; renderDestCards(); showToast(`${name} removed`); }
+  } catch(e) { showToast('Cannot connect to server', 'error'); }
+}
+
+async function openVoting() {
+  if (destinations.length < 2) { showToast('Add at least 2 destinations', 'error'); return; }
+  try {
+    const res  = await fetch(`${API_BASE}/group/${groupId}/open-voting`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'}
+    });
+    const data = await res.json();
+    if (data.success) {
+      votingOpen = true; showToast('Voting is now open! 🎉'); updatePhaseUI(); hideAll();
+      document.getElementById('surveySection').style.display = 'block';
+      showDropdown('');
+    }
+  } catch(e) { showToast('Cannot connect to server', 'error'); }
+}
+
+// ── Init & Group load ──────────────────────────────────────────────────────
+async function initVote() {
+  currentUser = loadUser();
+  if (!currentUser || !currentUser.user_id) { window.location.href = 'login.html'; return; }
+  document.getElementById('userInfoBox').textContent = `Logged in as: ${currentUser.name}`;
+
+  const savedGroupId = localStorage.getItem('PackVote_group_id');
+  if (savedGroupId) {
+    groupId = savedGroupId;
+  } else {
+    try {
+      const res  = await fetch(`${API_BASE}/auth/user/${currentUser.user_id}/groups`);
+      const data = await res.json();
+      if (!data.groups || data.groups.length === 0) {
+        showToast('No group found. Create or join one first.', 'error');
+        setTimeout(() => window.location.href = 'dashboard.html', 2000); return;
+      }
+      groupId = data.groups[0].group_id;
+      localStorage.setItem('PackVote_group_id', groupId);
+    } catch(e) { showToast('Cannot connect to server.', 'error'); return; }
+  }
+
+  if (currentUser.travel_preferences) {
+    const p = currentUser.travel_preferences;
+    if (p.travel_styles) {
+      p.travel_styles.forEach(s => {
+        const el = document.querySelector(`#styleGrid [data-val="${s}"]`);
+        if (el) el.classList.add('sel');
+      });
+    }
+    if (p.budget) {
+      const el = document.querySelector(`#budgetGrid [data-val="${p.budget}"]`);
+      if (el) selOne('budgetGrid', el);
+    }
+    if (p.trip_duration) document.getElementById('durationInput').value = p.trip_duration;
+  }
+
+  await loadGroup();
+}
+
+async function loadGroup() {
+  try {
+    const [groupRes, statusRes] = await Promise.all([
+      fetch(`${API_BASE}/group/${groupId}`),
+      fetch(`${API_BASE}/vote/status/${groupId}`)
+    ]);
+    const groupData  = await groupRes.json();
+    const statusData = await statusRes.json();
+    if (groupData.error) { showToast('Group not found', 'error'); return; }
+
+    isCreator    = groupData.created_by === currentUser.user_id;
+    votingOpen   = groupData.voting_open || false;
+    destinations = groupData.destinations || [];
+    hasVoted     = (groupData.voters || []).includes(currentUser.name);
+
+    document.getElementById('groupInfoBox').innerHTML = `
+      <div style="font-weight:700;margin-bottom:2px;">${groupData.name}</div>
+      <div style="font-size:.78rem;color:var(--text-muted);">ID: ${groupId}</div>
+      <div style="font-size:.78rem;margin-top:4px;color:${votingOpen ? 'var(--accent-3)' : 'var(--accent-gold)'};">
+        ● ${votingOpen ? 'Voting open' : 'Adding destinations'}
+      </div>`;
+
+    const members = groupData.members || [];
+    const voters  = groupData.voters  || [];
+    document.getElementById('memberVoteList').innerHTML = members.length === 0
+      ? '<div style="font-size:.8rem;color:var(--text-muted);">No members yet</div>'
+      : members.map(m => `
+          <div class="member-vote-row">
+            <div style="display:flex;align-items:center;gap:7px;">
+              <div class="member-avatar" style="width:24px;height:24px;font-size:.65rem;">${m[0].toUpperCase()}</div>${m}
+            </div>
+            ${voters.includes(m) ? '<span class="voted-badge">✓ Voted</span>' : '<span class="pending-badge">Pending</span>'}
+          </div>`).join('');
+
+    if (statusData.all_voted && votingOpen) {
+      hideAll();
+      document.getElementById('allVotedSection').style.display = 'block';
+      updatePhaseUI('all_voted');
+      if (pollTimer) clearInterval(pollTimer);
+      return;
+    }
+
+    updatePhaseUI();
+
+    if (!votingOpen && isCreator) {
+      renderDestCards();
+    } else if (votingOpen && hasVoted) {
+      hideAll();
+      document.getElementById('alreadyVotedSection').style.display = 'block';
+      const pending = statusData.pending_names || [];
+      document.getElementById('waitingForOthers').innerHTML = pending.length > 0
+        ? `<p style="font-size:.85rem;color:var(--text-muted);">Waiting for: <strong>${pending.join(', ')}</strong></p>` : '';
+      if (!pollTimer) pollTimer = setInterval(async () => {
+        const s = await (await fetch(`${API_BASE}/vote/status/${groupId}`)).json();
+        if (s.all_voted) { clearInterval(pollTimer); window.location.href = 'results.html'; }
+      }, 5000);
+    } else if (votingOpen && !hasVoted) {
+      hideAll();
+      document.getElementById('surveySection').style.display = 'block';
+      // Show initial dropdown with popular destinations
+      setTimeout(() => showDropdown(''), 300);
+    } else if (!votingOpen && !isCreator) {
+      hideAll();
+      document.getElementById('waitingSection').style.display = 'block';
+      if (!pollTimer) pollTimer = setInterval(loadGroup, 5000);
+    }
+  } catch(e) {
+    console.error('loadGroup:', e);
+    showToast('Error loading group', 'error');
+  }
+}
+
+function hideAll() {
+  ['addDestSection','surveySection','votingSection','waitingSection',
+   'alreadyVotedSection','allVotedSection'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function updatePhaseUI(override) {
+  const title = document.getElementById('phaseTitle');
+  const sub   = document.getElementById('phaseSub');
+  const badge = document.getElementById('phaseBadge');
+  if (override === 'all_voted') {
+    title.textContent = 'All votes in — results ready!'; sub.textContent = 'Click below to see results.'; badge.textContent = 'Complete'; return;
+  }
+  if (!votingOpen && isCreator) {
+    title.textContent = 'Phase 1 — Add destinations'; sub.textContent = 'Add destinations then open voting.'; badge.textContent = 'Creator';
+  } else if (!votingOpen && !isCreator) {
+    title.textContent = 'Waiting for creator...'; sub.textContent = 'Creator is adding destinations.'; badge.textContent = 'Stand by';
+  } else if (hasVoted) {
+    title.textContent = 'Vote submitted!'; sub.textContent = 'Waiting for others.'; badge.textContent = 'Voted';
+  } else {
+    title.textContent = 'Phase 2 — Survey & Vote'; sub.textContent = `Search and pick your destinations, then vote!`; badge.textContent = 'Your turn';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initVote);
+</script>
+</body>
+</html>

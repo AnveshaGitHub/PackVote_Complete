@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PackVote — Expense Tracker</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    .expenses-page   { padding-top: 80px; min-height: 100vh; }
+    .expenses-header {
+      background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(108,99,255,0.08));
+      border-bottom: 1px solid var(--border);
+      padding: 40px 0 32px;
+      margin-bottom: 40px;
+    }
+    .expenses-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 28px;
+      align-items: start;
+    }
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(4,1fr);
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    /* ── Expense card ── */
+    .expense-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px 20px;
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 10px; transition: var(--transition);
+      position: relative;
+    }
+    .expense-card:hover { border-color: var(--border-hover); transform: translateX(3px); }
+    .expense-icon { width: 44px; height: 44px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+    .cat-food       { background: rgba(255,107,53,0.15); }
+    .cat-transport  { background: rgba(108,99,255,0.15); }
+    .cat-hotel      { background: rgba(67,233,123,0.15); }
+    .cat-activities { background: rgba(255,215,0,0.15);  }
+    .cat-shopping   { background: rgba(255,101,132,0.15);}
+    .cat-other      { background: rgba(160,160,184,0.15);}
+    .expense-info   { flex: 1; min-width: 0; }
+    .expense-name   { font-weight: 700; font-size: 0.92rem; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .expense-meta   { font-size: 0.78rem; color: var(--text-muted); }
+    .expense-amount { font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; color: var(--accent-gold); flex-shrink: 0; }
+    .expense-delete {
+      position: absolute; top: 10px; right: 10px;
+      background: none; border: none;
+      color: var(--text-muted); cursor: pointer;
+      font-size: 0.8rem; opacity: 0; transition: var(--transition);
+      padding: 3px 6px; border-radius: 4px;
+    }
+    .expense-card:hover .expense-delete { opacity: 1; }
+    .expense-delete:hover { color: var(--accent-2); background: rgba(255,101,132,0.1); }
+
+    /* ── Add expense form ── */
+    .add-expense-form {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 22px 24px;
+      margin-bottom: 20px;
+    }
+    .add-expense-form h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 700; margin-bottom: 18px; }
+    .form-2col    { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+
+    /* ── Category buttons ── */
+    .category-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+    .cat-btn {
+      background: var(--bg-glass); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 10px 6px;
+      text-align: center; cursor: pointer; transition: var(--transition);
+      font-size: 0.78rem; color: var(--text-secondary);
+    }
+    .cat-btn:hover  { border-color: var(--border-hover); }
+    .cat-btn.active { border-color: var(--accent-gold); background: rgba(255,215,0,0.1); color: var(--accent-gold); font-weight: 600; }
+    .cat-btn-icon   { font-size: 1.2rem; display: block; margin-bottom: 3px; }
+
+    /* ── Member chips ── */
+    .members-check { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 7px; }
+    .member-check {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--bg-glass); border: 1px solid var(--border);
+      border-radius: 50px; padding: 5px 12px;
+      cursor: pointer; transition: var(--transition);
+      font-size: 0.82rem; user-select: none;
+    }
+    .member-check.checked { border-color: var(--accent-1); background: rgba(108,99,255,0.15); color: var(--accent-1); }
+    .member-check input { display: none; }
+
+    /* ── Settlement ── */
+    .settlement-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 18px;
+      margin-bottom: 8px; display: flex; align-items: center;
+      gap: 10px; transition: var(--transition);
+    }
+    .settlement-card:hover { border-color: var(--accent-3); }
+    .settlement-from   { font-weight: 700; color: var(--accent-2); font-size: 0.88rem; }
+    .settlement-to     { font-weight: 700; color: var(--accent-3); font-size: 0.88rem; }
+    .settlement-amount { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; color: var(--accent-gold); margin-left: auto; }
+    .settlement-arrow  { color: var(--text-muted); font-size: 0.9rem; }
+
+    .chart-wrap  { position: relative; height: 200px; margin: 16px 0; }
+    .balance-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem;
+    }
+    .balance-row:last-child { border-bottom: none; }
+    .balance-positive { color: var(--accent-3); font-weight: 700; }
+    .balance-negative { color: var(--accent-2); font-weight: 700; }
+
+    /* ── Group setup ── */
+    .group-setup { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px 24px; margin-bottom: 20px; }
+    .group-setup h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 700; margin-bottom: 14px; }
+    .add-member-row { display: flex; gap: 8px; margin-bottom: 10px; }
+
+    .group-info-bar {
+      background: rgba(108,99,255,0.08); border: 1px solid rgba(108,99,255,0.2);
+      border-radius: var(--radius-md); padding: 10px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px; font-size: 0.83rem; flex-wrap: wrap; gap: 8px;
+    }
+    .group-info-bar strong  { color: var(--accent-1); }
+    .switch-group-btn {
+      background: none; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 4px 10px;
+      color: var(--text-muted); cursor: pointer;
+      font-size: 0.75rem; transition: var(--transition);
+    }
+    .switch-group-btn:hover { border-color: var(--accent-2); color: var(--accent-2); }
+
+    .empty-expenses { text-align: center; padding: 48px 24px; color: var(--text-muted); }
+    .empty-expenses .empty-emoji { font-size: 2.5rem; display: block; margin-bottom: 12px; }
+
+    @media (max-width: 768px) {
+      .expenses-layout { grid-template-columns: 1fr; }
+      .stat-row        { grid-template-columns: 1fr 1fr; }
+      .category-grid   { grid-template-columns: repeat(3,1fr); }
+      .form-2col       { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">PackVote ✈</a>
+      <ul class="nav-links">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="vote.html">Vote</a></li>
+        <li><a href="results.html">Results</a></li>
+        <li><a href="planner.html">Planner</a></li>
+      </ul>
+      <a href="dashboard.html" class="btn btn-primary btn-sm">Dashboard ✈</a>
+    </div>
+  </nav>
+
+  <div class="expenses-page">
+    <div class="expenses-header">
+      <div class="container">
+        <div class="hero-badge">Group Finance</div>
+        <h1 class="section-title mt-16">Expense <span class="gradient-text">Tracker</span></h1>
+        <p class="section-subtitle">Split costs, track spending and settle up — all in one place.</p>
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-value" id="statTotal">₹0</div><div class="stat-label">Total Spent</div></div>
+          <div class="stat-card"><div class="stat-value" id="statPerPerson">₹0</div><div class="stat-label">Per Person</div></div>
+          <div class="stat-card"><div class="stat-value" id="statCount">0</div><div class="stat-label">Expenses</div></div>
+          <div class="stat-card"><div class="stat-value" id="statSettlements">0</div><div class="stat-label">Settlements</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container" style="padding-bottom:80px;">
+      <div class="expenses-layout">
+
+        <!-- ── LEFT: Main ── -->
+        <div>
+
+          <!-- Group Setup -->
+          <div class="group-setup" id="groupSetup">
+            <h3>👥 Setup your group</h3>
+            <p class="text-muted mb-16" style="font-size:0.83rem;">Each group ID keeps its own separate expenses — never mixed!</p>
+            <div class="form-group">
+              <label class="form-label">Group ID</label>
+              <input type="text" id="expGroupId" class="form-input" placeholder="Paste your group ID"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Members to split between</label>
+              <div class="add-member-row">
+                <input type="text" id="expMemberInput" class="form-input" placeholder="Enter member name"
+                       onkeypress="if(event.key==='Enter')addExpMember()"/>
+                <button class="btn btn-secondary" onclick="addExpMember()">Add</button>
+              </div>
+              <div id="expMembersList" class="members-check"></div>
+            </div>
+            <button class="btn btn-primary w-full mt-8" onclick="setupGroup()" style="justify-content:center;">
+              Start Tracking 💰
+            </button>
+          </div>
+
+          <!-- Active group info bar -->
+          <div class="group-info-bar" id="groupInfoBar" style="display:none;">
+            <span>Group: <strong id="activeGroupLabel">—</strong> &nbsp;·&nbsp; Members: <strong id="activeMembersLabel">—</strong></span>
+            <button class="switch-group-btn" onclick="switchGroup()">Switch Group</button>
+          </div>
+
+          <!-- Add Expense Form -->
+          <div class="add-expense-form" id="addExpenseForm" style="display:none;">
+            <h3>➕ Add Expense</h3>
+            <div class="form-2col">
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Description</label>
+                <input type="text" id="expDesc" class="form-input" placeholder="e.g. Hotel booking"
+                       onkeypress="if(event.key==='Enter')submitExpense()"/>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Amount (₹)</label>
+                <input type="number" id="expAmount" class="form-input" placeholder="0.00" min="0" step="0.01"/>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Paid By</label>
+              <select id="expPaidBy" class="form-input">
+                <option value="">Select who paid</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <div class="category-grid">
+                <div class="cat-btn active" data-cat="food"       onclick="selectCat(this)"><span class="cat-btn-icon">🍜</span>Food</div>
+                <div class="cat-btn"        data-cat="transport"  onclick="selectCat(this)"><span class="cat-btn-icon">🚗</span>Transport</div>
+                <div class="cat-btn"        data-cat="hotel"      onclick="selectCat(this)"><span class="cat-btn-icon">🏨</span>Hotel</div>
+                <div class="cat-btn"        data-cat="activities" onclick="selectCat(this)"><span class="cat-btn-icon">🎟️</span>Activities</div>
+                <div class="cat-btn"        data-cat="shopping"   onclick="selectCat(this)"><span class="cat-btn-icon">🛍️</span>Shopping</div>
+                <div class="cat-btn"        data-cat="other"      onclick="selectCat(this)"><span class="cat-btn-icon">📦</span>Other</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Split Among</label>
+              <div class="members-check" id="splitMembers"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Split Type</label>
+              <div class="tags-container">
+                <span class="tag selected" id="splitEqual"  onclick="setSplitType('equal')">⚖️ Equal Split</span>
+                <span class="tag"          id="splitCustom" onclick="setSplitType('custom')">✏️ Custom Split</span>
+              </div>
+            </div>
+
+            <div id="customSplitArea" style="display:none;margin-top:10px;">
+              <label class="form-label">Custom Amounts (₹)</label>
+              <div id="customSplitInputs"></div>
+            </div>
+
+            <button class="btn btn-success w-full mt-16" onclick="submitExpense()" style="justify-content:center;">
+              Add Expense ➕
+            </button>
+          </div>
+
+          <!-- Expenses List -->
+          <div id="expensesList">
+            <div class="empty-expenses">
+              <span class="empty-emoji">🧾</span>
+              <p>Set up your group above to start tracking expenses!</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── RIGHT: Sidebar ── -->
+        <div>
+          <div class="card mb-24" id="chartCard" style="display:none;">
+            <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:700;margin-bottom:6px;">📊 Spending Breakdown</h3>
+            <div class="chart-wrap"><canvas id="expenseChart"></canvas></div>
+          </div>
+
+          <div class="card mb-24" id="balancesCard" style="display:none;">
+            <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:700;margin-bottom:14px;">⚖️ Balances</h3>
+            <div id="balancesList"></div>
+          </div>
+
+          <div class="card mb-24" id="settlementsCard" style="display:none;">
+            <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:700;margin-bottom:6px;">🤝 Settle Up</h3>
+            <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:14px;">Minimum transactions to clear all debts</p>
+            <div id="settlementsList"></div>
+          </div>
+
+          <div class="card" id="shareCard" style="display:none;">
+            <h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:700;margin-bottom:14px;">📤 Share Summary</h3>
+            <button class="btn btn-primary w-full mb-8" onclick="shareExpenses()" style="justify-content:center;">📱 Share on WhatsApp</button>
+            <button class="btn btn-secondary w-full"   onclick="window.print()"  style="justify-content:center;">📄 Export PDF</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="app.js"></script>
+  <script>
+    var expGroupId   = '';
+    var expMembers   = [];
+    var selectedCat  = 'food';
+    var splitType    = 'equal';
+    var expenseChart = null;
+
+    // ── Auto-load on page open ────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', async function() {
+      var rawGid = (
+        localStorage.getItem('PackVote_group_id') ||
+        localStorage.getItem('triply_group_id') || ''
+      ).replace(/^"(.*)"$/, '$1');
+
+      if (!rawGid) return;
+      document.getElementById('expGroupId').value = rawGid;
+
+      try {
+        var gRes  = await fetch(API + '/group/' + rawGid);
+        var gData = await gRes.json();
+        if (gData.members && gData.members.length >= 1) {
+          expMembers = gData.members;
+          localStorage.setItem('PackVote_exp_members_' + rawGid, JSON.stringify(expMembers));
+          renderExpMembersList();
+          setupGroupDirect(rawGid, expMembers);
+          return;
+        }
+      } catch(e) {}
+
+      var saved = localStorage.getItem('PackVote_exp_members_' + rawGid);
+      if (saved) {
+        try {
+          var savedMembers = JSON.parse(saved);
+          if (savedMembers && savedMembers.length >= 1) {
+            expMembers = savedMembers;
+            renderExpMembersList();
+            setupGroupDirect(rawGid, savedMembers);
+          }
+        } catch(e2) {}
+      }
+    });
+
+    // ── Add member ────────────────────────────────────────────────────
+    function addExpMember() {
+      var input = document.getElementById('expMemberInput');
+      var name  = input.value.trim();
+      if (!name)                     { showToast('Enter a name', 'error'); return; }
+      if (expMembers.includes(name)) { showToast('Already added', 'error'); return; }
+      expMembers.push(name);
+      input.value = '';
+      renderExpMembersList();
+      showToast(name + ' added!');
+    }
+
+    function renderExpMembersList() {
+      document.getElementById('expMembersList').innerHTML = expMembers.map(function(m) {
+        return '<div class="member-check checked">' +
+          '<div class="member-avatar" style="width:20px;height:20px;font-size:0.65rem;">' + m[0].toUpperCase() + '</div>' +
+          m + '</div>';
+      }).join('');
+    }
+
+    // ── Setup group ───────────────────────────────────────────────────
+    function setupGroup() {
+      var groupId = document.getElementById('expGroupId').value.trim();
+      if (!groupId)              { showToast('Enter a group ID', 'error'); return; }
+      if (expMembers.length < 1) { showToast('Add at least 1 member', 'error'); return; }
+      expenseChart = null;
+      setupGroupDirect(groupId, expMembers);
+    }
+
+    function setupGroupDirect(groupId, members) {
+      expGroupId = groupId;
+      expMembers = members;
+
+      localStorage.setItem('PackVote_exp_members_' + groupId, JSON.stringify(members));
+      localStorage.setItem('PackVote_group_id', groupId);
+
+      document.getElementById('groupSetup').style.display    = 'none';
+      document.getElementById('groupInfoBar').style.display  = 'flex';
+      document.getElementById('addExpenseForm').style.display = 'block';
+
+      setText('activeGroupLabel',   groupId);
+      setText('activeMembersLabel', members.join(', '));
+
+      var select = document.getElementById('expPaidBy');
+      select.innerHTML = '<option value="">Select who paid</option>' +
+        members.map(function(m) { return '<option value="' + m + '">' + m + '</option>'; }).join('');
+
+      renderSplitMembers(members);
+      loadExpenses();
+    }
+
+    function switchGroup() {
+      expGroupId = ''; expMembers = []; expenseChart = null;
+      ['groupInfoBar','addExpenseForm','chartCard','balancesCard','settlementsCard','shareCard'].forEach(function(id) {
+        document.getElementById(id).style.display = 'none';
+      });
+      setText('statTotal','₹0'); setText('statPerPerson','₹0'); setText('statCount','0'); setText('statSettlements','0');
+      document.getElementById('expensesList').innerHTML = '<div class="empty-expenses"><span class="empty-emoji">🧾</span><p>Set up your group above to start tracking!</p></div>';
+      document.getElementById('expMembersList').innerHTML = '';
+      document.getElementById('expGroupId').value = '';
+      document.getElementById('groupSetup').style.display = 'block';
+      showToast('Switched! Enter new group details 🔄');
+    }
+
+    function renderSplitMembers(members) {
+      document.getElementById('splitMembers').innerHTML = members.map(function(m) {
+        return '<div class="member-check checked" onclick="toggleSplitMember(this)" data-member="' + m + '">' +
+          '<div class="member-avatar" style="width:20px;height:20px;font-size:0.65rem;">' + m[0].toUpperCase() + '</div>' +
+          m + '</div>';
+      }).join('');
+    }
+
+    function toggleSplitMember(el) {
+      el.classList.toggle('checked');
+      if (splitType === 'custom') renderCustomSplitInputs();
+    }
+
+    function selectCat(el) {
+      document.querySelectorAll('.cat-btn').forEach(function(b) { b.classList.remove('active'); });
+      el.classList.add('active');
+      selectedCat = el.dataset.cat;
+    }
+
+    function setSplitType(type) {
+      splitType = type;
+      document.getElementById('splitEqual').classList.toggle('selected',  type === 'equal');
+      document.getElementById('splitCustom').classList.toggle('selected', type === 'custom');
+      document.getElementById('customSplitArea').style.display = type === 'custom' ? 'block' : 'none';
+      if (type === 'custom') renderCustomSplitInputs();
+    }
+
+    function renderCustomSplitInputs() {
+      var checked   = [...document.querySelectorAll('#splitMembers .member-check.checked')];
+      var amount    = parseFloat(document.getElementById('expAmount').value) || 0;
+      var perPerson = checked.length > 0 ? (amount / checked.length).toFixed(2) : 0;
+      document.getElementById('customSplitInputs').innerHTML = checked.map(function(el) {
+        var member = el.dataset.member;
+        return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+          '<span style="min-width:100px;font-size:0.85rem;">' + member + '</span>' +
+          '<input type="number" class="form-input" id="custom_' + member + '" value="' + perPerson + '" step="0.01" min="0" style="flex:1;" placeholder="0.00"/>' +
+          '</div>';
+      }).join('');
+    }
+
+    async function submitExpense() {
+      var desc    = document.getElementById('expDesc').value.trim();
+      var amount  = parseFloat(document.getElementById('expAmount').value);
+      var paidBy  = document.getElementById('expPaidBy').value;
+      var checked = [...document.querySelectorAll('#splitMembers .member-check.checked')].map(function(el) { return el.dataset.member; });
+
+      if (!desc)                { showToast('Enter a description', 'error'); return; }
+      if (!amount || amount<=0) { showToast('Enter a valid amount', 'error'); return; }
+      if (!paidBy)              { showToast('Select who paid', 'error'); return; }
+      if (checked.length === 0) { showToast('Select at least 1 member to split', 'error'); return; }
+
+      var splitAmong = checked;
+      if (splitType === 'custom') {
+        var customSplits = {};
+        var total = 0;
+        for (var i = 0; i < checked.length; i++) {
+          var member = checked[i];
+          var val = parseFloat(document.getElementById('custom_' + member)?.value || 0);
+          customSplits[member] = val;
+          total += val;
+        }
+        if (Math.abs(total - amount) > 0.5) {
+          showToast('Custom split total (₹' + total + ') must equal amount (₹' + amount + ')', 'error');
+          return;
+        }
+        splitAmong = customSplits;
+      }
+
+      try {
+        var res  = await fetch(API + '/expenses/add', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            group_id:    expGroupId,
+            paid_by:     paidBy,
+            amount,
+            description: desc,
+            category:    selectedCat,
+            split_among: splitAmong,
+            split_type:  splitType
+          })
+        });
+        var data = await res.json();
+        if (data.success) {
+          showToast('₹' + amount + ' added! 💰');
+          document.getElementById('expDesc').value   = '';
+          document.getElementById('expAmount').value = '';
+          loadExpenses();
+        } else {
+          showToast(data.error || 'Failed to add expense', 'error');
+        }
+      } catch(e) {
+        showToast('Cannot connect to server', 'error');
+      }
+    }
+
+    async function loadExpenses() {
+      if (!expGroupId) return;
+      try {
+        var res  = await fetch(API + '/expenses/' + expGroupId);
+        var data = await res.json();
+        renderExpenses(data.expenses    || []);
+        renderSummary(data.summary      || {});
+        renderSettlements(data.settlements || []);
+      } catch(e) {
+        showToast('Could not load expenses', 'error');
+      }
+    }
+
+    function renderExpenses(expenses) {
+      var list = document.getElementById('expensesList');
+      if (expenses.length === 0) {
+        list.innerHTML = '<div class="empty-expenses"><span class="empty-emoji">🧾</span><p>No expenses yet — add your first one above!</p></div>';
+        return;
+      }
+      var catIcons = { food:'🍜', transport:'🚗', hotel:'🏨', activities:'🎟️', shopping:'🛍️', other:'📦' };
+      list.innerHTML = '<h3 style="font-family:var(--font-display);font-size:0.95rem;font-weight:700;margin-bottom:14px;">🧾 All Expenses (' + expenses.length + ')</h3>' +
+        expenses.slice().map(function(exp) {
+          // ✅ FIX: always convert split_among to array before calling .join()
+          var splitList = Array.isArray(exp.split_among)
+            ? exp.split_among
+            : (exp.split_among ? Object.keys(exp.split_among) : []);
+          var splitDisplay = splitList.join(', ') || '—';
+
+          return '<div class="expense-card">' +
+            '<div class="expense-icon cat-' + (exp.category||'other') + '">' + (catIcons[exp.category]||'📦') + '</div>' +
+            '<div class="expense-info">' +
+              '<div class="expense-name">' + exp.description + '</div>' +
+              '<div class="expense-meta">Paid by <strong>' + exp.paid_by + '</strong> · Split: ' + splitDisplay + (exp.date ? ' · ' + exp.date : '') + '</div>' +
+            '</div>' +
+            '<div class="expense-amount">₹' + Number(exp.amount).toLocaleString('en-IN') + '</div>' +
+            '<button class="expense-delete" data-id="' + exp.id + '" onclick="deleteExp(this.dataset.id)">✕</button>' +
+          '</div>';
+        }).join('');
+    }
+
+    function renderSummary(summary) {
+      if (!summary || !summary.total_spent) {
+        setText('statTotal','₹0'); setText('statPerPerson','₹0'); setText('statCount','0'); setText('statSettlements','0');
+        return;
+      }
+      setText('statTotal',       '₹' + (summary.total_spent||0).toLocaleString('en-IN'));
+      setText('statPerPerson',   '₹' + (summary.per_person_avg||0).toLocaleString('en-IN'));
+      setText('statCount',       summary.total_expenses||0);
+      setText('statSettlements', Object.keys(summary.balances||{}).length);
+
+      if (summary.balances && Object.keys(summary.balances).length > 0) {
+        document.getElementById('balancesCard').style.display = 'block';
+        document.getElementById('balancesList').innerHTML = Object.entries(summary.balances).map(function(entry) {
+          var person = entry[0]; var bal = entry[1];
+          return '<div class="balance-row">' +
+            '<span>' + person + '</span>' +
+            '<span class="' + (bal >= 0 ? 'balance-positive' : 'balance-negative') + '">' +
+              (bal >= 0 ? '+' : '') + '₹' + Math.abs(bal).toLocaleString('en-IN') + ' ' +
+              (bal >= 0 ? '(gets back)' : '(owes)') +
+            '</span>' +
+          '</div>';
+        }).join('');
+      }
+
+      if (summary.by_category && Object.keys(summary.by_category).length > 0) {
+        document.getElementById('chartCard').style.display = 'block';
+        renderChart(summary.by_category);
+      }
+
+      document.getElementById('shareCard').style.display = 'block';
+    }
+
+    function renderSettlements(settlements) {
+      var card = document.getElementById('settlementsCard');
+      var list = document.getElementById('settlementsList');
+      if (!settlements || settlements.length === 0) { card.style.display = 'none'; return; }
+      card.style.display = 'block';
+      list.innerHTML = settlements.map(function(s) {
+        return '<div class="settlement-card">' +
+          '<span class="settlement-from">' + s.from + '</span>' +
+          '<span class="settlement-arrow">→</span>' +
+          '<span class="settlement-to">' + s.to + '</span>' +
+          '<span class="settlement-amount">₹' + s.amount.toLocaleString('en-IN') + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderChart(byCategory) {
+      var ctx    = document.getElementById('expenseChart').getContext('2d');
+      var labels = Object.keys(byCategory);
+      var values = Object.values(byCategory);
+      var colors = ['#ff6b35','#6c63ff','#43e97b','#ffd700','#ff6584','#a0a0b8'];
+      if (expenseChart) { expenseChart.destroy(); expenseChart = null; }
+      expenseChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{ data: values, backgroundColor: colors.slice(0, labels.length), borderWidth: 0, hoverOffset: 6 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position:'bottom', labels:{ color:'#a0a0b8', font:{size:11}, boxWidth:10, padding:12 } },
+            tooltip: { callbacks: { label: function(ctx) { return ' ₹' + ctx.raw.toLocaleString('en-IN'); } } }
+          }
+        }
+      });
+    }
+
+    async function deleteExp(expenseId) {
+      if (!confirm('Delete this expense?')) return;
+      try {
+        var res  = await fetch(API + '/expenses/delete/' + expGroupId + '/' + expenseId, { method: 'DELETE' });
+        var data = await res.json();
+        if (data.success) { showToast('Expense deleted'); loadExpenses(); }
+        else showToast(data.error || 'Could not delete', 'error');
+      } catch(e) { showToast('Could not delete', 'error'); }
+    }
+
+    function shareExpenses() {
+      var total = document.getElementById('statTotal').textContent;
+      var count = document.getElementById('statCount').textContent;
+      window.open('https://wa.me/?text=' + encodeURIComponent(
+        '💰 *PackVote Expense Summary*\nGroup: ' + expGroupId + '\nTotal: ' + total + ' across ' + count + ' expenses\nTracked with PackVote ✈'
+      ), '_blank');
+    }
+  </script>
+</body>
+</html>

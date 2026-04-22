@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PackVote — Results</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    .results-page{padding-top:80px}
+
+    /* ── Winner Hero ── */
+    .winner-bg{position:relative;min-height:70vh;display:flex;align-items:center;overflow:hidden}
+    .winner-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.25);z-index:0;transition:opacity 1s ease}
+    .winner-content{position:relative;z-index:2;text-align:center;width:100%;padding:80px 24px}
+    .confetti-emoji{font-size:3rem;margin-bottom:16px;display:block;animation:bounce 1s ease infinite alternate}
+    @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-12px)}}
+    .winner-subtitle{font-size:1rem;color:#ccc;margin-top:12px;max-width:500px;margin-left:auto;margin-right:auto}
+
+    /* ── FIXED STATS: 4 cards, text never clips ── */
+    .winner-content .stats-grid{
+  display:flex !important;          /* grid ki jagah flex */
+  flex-wrap:wrap;                   /* next line me aa sake */
+  gap:12px;
+  justify-content:center;
+  width:min(680px,92vw);
+  margin:32px auto 0;
+}
+
+.winner-content .stat-card{
+  padding:16px 12px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:16px;
+  backdrop-filter:blur(10px);
+
+  width:fit-content;               /* 🔥 main change */
+  min-width:unset;                 /* remove restriction */
+}
+
+.winner-content .stat-value{
+  font-family:var(--font-display);
+  font-size: clamp(.9rem, 3vw, 1.4rem);
+  font-weight:800;
+  color:#fff;
+  display:block;
+  text-align:center;
+  word-break:break-word;
+  white-space:nowrap;              /* 🔥 important */
+  line-height:1.2;
+  margin-bottom:4px;
+}
+
+.winner-content .stat-label{
+  font-size:clamp(.6rem,1.5vw,.7rem);
+  color:rgba(255,255,255,.6);
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  font-weight:600;
+  display:block;
+  text-align:center;
+  white-space:nowrap;              /* 🔥 optional */
+}
+
+
+    /* ── Body ── */
+    .results-body{padding:80px 0}
+    .results-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-bottom:64px}
+
+    /* ── Weather ── */
+    .weather-card{background:linear-gradient(135deg,rgba(67,233,123,.08),rgba(108,99,255,.08));border:1px solid rgba(67,233,123,.2);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px}
+    .weather-main{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+    .weather-temp{font-family:var(--font-display);font-size:3rem;font-weight:800;color:var(--accent-3)}
+    .weather-info h4{font-size:1rem;font-weight:600}
+    .weather-info p{font-size:.85rem;color:var(--text-secondary)}
+    .forecast-row{display:flex;gap:10px;flex-wrap:wrap}
+    .forecast-day{background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 14px;text-align:center;font-size:.8rem;flex:1;min-width:80px}
+    .forecast-day .date{color:var(--text-muted);margin-bottom:4px}
+    .forecast-day .temp{font-weight:700;color:var(--accent-3)}
+
+    /* ── Cost grid ── */
+    .cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .cost-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px}
+    .cost-item-label{font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .cost-item-value{font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:var(--accent-gold)}
+
+    /* ── Settlement Section ── */
+    .settlement-section{margin-bottom:40px}
+    .settlement-section .section-title{font-size:1.4rem;margin-bottom:6px}
+    .settlement-card-item{
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:var(--radius-md);
+      padding:16px 20px;
+      margin-bottom:10px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      transition:var(--transition);
+    }
+    .settlement-card-item:hover{border-color:var(--border-hover);transform:translateX(4px)}
+    .settle-from{
+      font-weight:700;
+      font-size:.95rem;
+      background:rgba(255,101,132,.12);
+      border:1px solid rgba(255,101,132,.3);
+      border-radius:50px;
+      padding:4px 14px;
+      color:#ff8fab;
+    }
+    .settle-arrow{color:var(--text-muted);font-size:.85rem;flex-shrink:0}
+    .settle-to{
+      font-weight:700;
+      font-size:.95rem;
+      background:rgba(67,233,123,.12);
+      border:1px solid rgba(67,233,123,.3);
+      border-radius:50px;
+      padding:4px 14px;
+      color:#43e97b;
+    }
+    .settle-amount{
+      margin-left:auto;
+      font-family:var(--font-display);
+      font-size:1.1rem;
+      font-weight:800;
+      color:var(--accent-gold);
+    }
+    .settle-done-btn{
+      padding:5px 14px;
+      border-radius:50px;
+      border:1px solid rgba(67,233,123,.4);
+      background:rgba(67,233,123,.08);
+      color:#43e97b;
+      font-size:.78rem;
+      font-weight:700;
+      cursor:pointer;
+      transition:var(--transition);
+      flex-shrink:0;
+    }
+    .settle-done-btn:hover{background:rgba(67,233,123,.2)}
+    .settle-done-btn.settled{
+      background:rgba(67,233,123,.2);
+      opacity:.6;
+      cursor:default;
+    }
+    .balances-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+    .balance-pill{
+      padding:8px 16px;
+      border-radius:50px;
+      font-size:.82rem;
+      font-weight:700;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .balance-pill.positive{background:rgba(67,233,123,.12);border:1px solid rgba(67,233,123,.3);color:#43e97b}
+    .balance-pill.negative{background:rgba(255,101,132,.12);border:1px solid rgba(255,101,132,.3);color:#ff8fab}
+    .balance-pill.zero{background:rgba(160,160,184,.08);border:1px solid rgba(160,160,184,.2);color:var(--text-muted)}
+    .no-settlements{
+      text-align:center;
+      padding:32px;
+      color:var(--text-muted);
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:var(--radius-md);
+      font-size:.9rem;
+    }
+
+    /* ── Banners ── */
+    .tie-banner{background:linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,101,132,.08));border:1px solid rgba(255,215,0,.3);border-radius:16px;padding:24px;margin-bottom:32px}
+    .waiting-banner{background:linear-gradient(135deg,rgba(108,99,255,.1),rgba(67,233,123,.05));border:1px solid rgba(108,99,255,.3);border-radius:16px;padding:32px;text-align:center;margin-bottom:32px}
+
+    /* ── Booking ── */
+    .booking-category{margin-bottom:28px}
+    .booking-cat-title{font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:12px;color:var(--text-secondary)}
+    .booking-links-row{display:flex;flex-wrap:wrap;gap:12px}
+    .booking-btn{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 18px;text-decoration:none;color:var(--text-primary);font-size:.85rem;transition:var(--transition);cursor:pointer;min-width:160px}
+    .booking-btn:hover{border-color:var(--border-hover);transform:translateY(-3px);box-shadow:var(--shadow-glow)}
+    .booking-btn-logo{font-size:1.2rem}
+    .booking-btn-info{display:flex;flex-direction:column}
+    .booking-btn-name{font-weight:700;font-size:.85rem}
+    .booking-btn-note{font-size:.72rem;color:var(--text-muted);margin-top:1px}
+
+    @media(max-width:768px){
+      .results-grid{grid-template-columns:1fr}
+      .cost-grid{grid-template-columns:1fr}
+      .winner-content .stats-grid{grid-template-columns:repeat(2,1fr) !important;width:92vw}
+      .settlement-card-item{gap:8px}
+      .settle-amount{margin-left:0;width:100%}
+    }
+  </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo">PackVote ✈</a>
+    <ul class="nav-links">
+      <li><a href="dashboard.html">Dashboard</a></li>
+      <li><a href="vote.html">Vote</a></li>
+      <li><a href="results.html">Results</a></li>
+      <li><a href="planner.html">Planner</a></li>
+      <li><a href="expenses.html">Expenses</a></li>
+    </ul>
+    <a href="dashboard.html" class="btn btn-primary btn-sm">Dashboard ✈</a>
+    <button class="btn btn-secondary btn-sm" onclick="window.print()">📄 Export PDF</button>
+  </div>
+</nav>
+
+<div class="results-page">
+
+  <!-- ── WINNER HERO ── -->
+  <div class="winner-bg">
+    <img id="winnerBgImg" src="https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1600&q=80" class="winner-bg-img" alt="destination"/>
+    <div class="winner-content">
+      <span class="confetti-emoji">🎉</span>
+      <div class="winner-label">Your group is going to</div>
+      <div class="winner-destination" id="winnerName">Loading...</div>
+      <p class="winner-subtitle" id="winnerDesc">Finding your perfect destination...</p>
+      <div class="stats-grid" style="margin-top:32px;">
+        <div class="stat-card">
+          <span class="stat-value" id="statVoters">—</span>
+          <span class="stat-label">Voters</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statDays">—</span>
+          <span class="stat-label">Duration</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statBudget">—</span>
+          <span class="stat-label">Budget</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statMonth">—</span>
+          <span class="stat-label">Month</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="results-body">
+    <div class="container">
+
+      <!-- Steps -->
+      <div class="steps mb-32">
+        <div class="step done"><div class="step-circle">✓</div><span class="step-label">Create Group</span></div>
+        <div class="step-line done"></div>
+        <div class="step done"><div class="step-circle">✓</div><span class="step-label">Vote</span></div>
+        <div class="step-line done"></div>
+        <div class="step active"><div class="step-circle">3</div><span class="step-label">Results</span></div>
+      </div>
+
+      <!-- Waiting banner -->
+      <div id="waitingBanner" style="display:none;" class="waiting-banner">
+        <div style="font-size:2.5rem;margin-bottom:12px;">⏳</div>
+        <h3 style="font-size:1.1rem;font-weight:700;">Waiting for all members to vote</h3>
+        <p style="color:var(--text-secondary);margin-top:8px;" id="waitingBannerText">Loading...</p>
+        <p style="color:var(--text-muted);font-size:.82rem;margin-top:12px;">This page auto-refreshes every 10 seconds.</p>
+      </div>
+
+      <!-- Tie banner -->
+      <div id="tieBanner" style="display:none;" class="tie-banner">
+        <div style="font-size:1.4rem;font-weight:800;margin-bottom:6px;">⚖️ It's a Tie!</div>
+        <p style="color:var(--text-secondary);font-size:.9rem;margin-bottom:16px;" id="tieDesc"></p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="useRevote()">🔄 Start Revote</button>
+          <button class="btn btn-secondary" onclick="useSurveyWinner()" id="surveyWinnerBtn">🧠 Use Survey Pick</button>
+        </div>
+        <div id="surveyExplanation" style="display:none;margin-top:16px;background:var(--bg-card);border-radius:10px;padding:16px;">
+          <div style="font-weight:700;margin-bottom:8px;" id="surveyWinnerTitle"></div>
+          <p style="font-size:.85rem;color:var(--text-secondary);" id="surveyWinnerReason"></p>
+        </div>
+      </div>
+
+      <!-- Conflicts -->
+      <div class="conflict-section" id="conflictSection" style="display:none;">
+        <h3 class="section-title" style="font-size:1.4rem;margin-bottom:16px;">⚠️ Group conflicts detected</h3>
+        <div id="conflictList"></div>
+      </div>
+
+      <div id="mainResultsContent" style="display:none;">
+
+        <!-- ── TWO-COLUMN GRID ── -->
+        <div class="results-grid">
+
+          <!-- LEFT COLUMN -->
+          <div>
+            <h2 class="section-title" style="font-size:1.6rem;margin-bottom:8px;">Vote breakdown</h2>
+            <p class="text-muted mb-24">Borda count scores — earlier 👍 = more points</p>
+            <div id="scoreList"></div>
+
+            <h2 class="section-title mt-48" style="font-size:1.6rem;margin-bottom:8px;">AI Recommendations</h2>
+            <p class="text-muted mb-24">Based on your group's combined travel styles</p>
+            <div id="recList"></div>
+
+            <!-- ── WHO OWES WHOM ── -->
+            <div class="settlement-section mt-48" id="settlementSection" style="display:none;">
+              <h2 class="section-title" style="font-size:1.6rem;margin-bottom:6px;">💸 Who Owes Whom</h2>
+              <p class="text-muted mb-24">Settle up before the trip — mark as done when paid</p>
+
+              <!-- Net balances -->
+              <div id="balancesPills" class="balances-row mb-16"></div>
+
+              <!-- Settlement transactions -->
+              <div id="settlementsList"></div>
+
+              <!-- All settled banner -->
+              <div id="allSettledBanner" style="display:none;" class="no-settlements">
+                🎉 All settled up! Everyone is even. Time to pack your bags!
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div>
+            <h2 class="section-title" style="font-size:1.6rem;margin-bottom:24px;">🌤️ Weather forecast</h2>
+            <div class="weather-card">
+              <div class="weather-main">
+                <div class="weather-temp" id="weatherTemp">—°C</div>
+                <div class="weather-info">
+                  <h4 id="weatherDesc">Loading weather...</h4>
+                  <p id="weatherHumidity">Humidity: —</p>
+                </div>
+              </div>
+              <div class="forecast-row" id="forecastRow"></div>
+            </div>
+
+            <h2 class="section-title mt-32" style="font-size:1.6rem;margin-bottom:24px;">💰 Cost estimate</h2>
+            <div class="cost-grid" id="costGrid"></div>
+          </div>
+        </div>
+
+        <!-- Map -->
+        <div style="margin-bottom:64px;">
+          <h2 class="section-title" style="font-size:1.6rem;margin-bottom:8px;">📍 Destination map</h2>
+          <p class="text-muted mb-24">Your winning destination on the map</p>
+          <div id="map"></div>
+        </div>
+
+        <!-- Itinerary -->
+        <div style="margin-bottom:80px;">
+          <h2 class="section-title" style="font-size:1.6rem;margin-bottom:8px;">📅 Your itinerary</h2>
+          <p class="text-muted mb-24">AI-generated day-by-day plan</p>
+          <div id="itineraryList"></div>
+        </div>
+
+        <!-- Booking links -->
+        <div style="margin-bottom:64px;">
+          <h2 class="section-title" style="font-size:1.6rem;margin-bottom:8px;">🎟️ Book your trip</h2>
+          <p class="text-muted mb-24">Flights, trains, hotels, food and activities</p>
+          <div class="booking-category"><div class="booking-cat-title">✈️ Flights</div><div class="booking-links-row" id="linksFlights"></div></div>
+          <div class="booking-category"><div class="booking-cat-title">🚆 Trains</div><div class="booking-links-row" id="linksTrains"></div></div>
+          <div class="booking-category"><div class="booking-cat-title">🚌 Buses</div><div class="booking-links-row" id="linksBuses"></div></div>
+          <div class="booking-category"><div class="booking-cat-title">🏨 Hotels</div><div class="booking-links-row" id="linksHotels"></div></div>
+          <div class="booking-category"><div class="booking-cat-title">🍽️ Food</div><div class="booking-links-row" id="linksFood"></div></div>
+          <div class="booking-category"><div class="booking-cat-title">🎯 Activities</div><div class="booking-links-row" id="linksActivities"></div></div>
+        </div>
+
+        <!-- Share -->
+        <div style="text-align:center;padding:60px 0;border-top:1px solid var(--border);">
+          <h2 class="section-title">Share with your group! 🚀</h2>
+          <p class="text-muted mt-8">Send the itinerary to everyone</p>
+          <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:24px;">
+            <button class="btn btn-primary" onclick="shareWhatsApp()">📱 Share on WhatsApp</button>
+            <button class="btn btn-secondary" onclick="window.print()">📄 Export as PDF</button>
+            <button class="btn btn-secondary" onclick="copyLink()">🔗 Copy Link</button>
+            <a href="dashboard.html" class="btn btn-secondary">🏠 Dashboard</a>
+          </div>
+        </div>
+
+      </div><!-- /mainResultsContent -->
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+<script>
+var _pvMap         = null;
+var _lastConsensus = null;
+var _surveyWinner  = null;
+var _groupId       = null;
+var _settledSet    = {};   // track which settlements are marked done
+
+const API_BASE = 'http://127.0.0.1:5000/api';
+
+/* ── Helpers ── */
+function pvSetText(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// Capitalize every word: "leh ladakh" → "Leh Ladakh"
+function titleCase(str) {
+  if (!str) return '—';
+  return String(str).replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+}
+
+/* ── Init ── */
+async function initResultsPage() {
+  var user = loadUser();
+  if (!user) { window.location.href = 'login.html'; return; }
+
+  _groupId = localStorage.getItem('PackVote_group_id') || null;
+
+  if (!_groupId) {
+    try {
+      var r  = await fetch(API_BASE + '/auth/user/' + user.user_id + '/groups');
+      var d  = await r.json();
+      var gs = d.groups || [];
+      if (gs.length > 0) {
+        _groupId = gs[0].group_id;
+        localStorage.setItem('PackVote_group_id', _groupId);
+      }
+    } catch(e) {}
+  }
+
+  if (!_groupId) {
+    showToast('No group found — showing demo', 'error');
+    loadDemoResults();
+    return;
+  }
+
+  await loadRealResults(_groupId);
+}
+
+/* ── Load real results ── */
+async function loadRealResults(groupId) {
+  try {
+    var res = await fetch(API_BASE + '/vote/results/' + groupId);
+
+    if (res.status === 202) {
+      var d202 = await res.json();
+      document.getElementById('waitingBanner').style.display = 'block';
+      pvSetText('waitingBannerText',
+        (d202.voted_count || 0) + ' of ' + (d202.total_members || '?') +
+        ' members have voted. Waiting for ' +
+        ((d202.total_members || 0) - (d202.voted_count || 0)) + ' more.'
+      );
+      setTimeout(function(){ loadRealResults(groupId); }, 10000);
+      return;
+    }
+
+    var data = await res.json();
+
+    if (data.error) {
+      if (data.error === 'not_all_voted') {
+        document.getElementById('waitingBanner').style.display = 'block';
+        pvSetText('waitingBannerText',
+          (data.voted_count || 0) + ' of ' + (data.total_members || '?') + ' members have voted.'
+        );
+        setTimeout(function(){ loadRealResults(groupId); }, 10000);
+        return;
+      }
+      showToast('No votes found yet — showing demo', 'error');
+      loadDemoResults();
+      return;
+    }
+
+    if (!data.consensus || !data.consensus.winner) {
+      showToast('No winner yet — showing demo', 'error');
+      loadDemoResults();
+      return;
+    }
+
+    _lastConsensus = data.consensus;
+    var winner     = data.consensus.winner;
+
+    if (data.tie && data.tie.is_tie) renderTieBanner(data.tie);
+
+    renderResults(data);
+    document.getElementById('mainResultsContent').style.display = 'block';
+
+    loadWeatherSection(winner);
+    loadItinerarySection(winner, data.consensus);
+    loadDeepLinksSection(winner, data.consensus.avg_duration || 7, data.consensus.consensus_budget || 'medium');
+
+    // Load settlements from expenses API
+    loadSettlementsSection(groupId);
+
+  } catch(e) {
+    console.error('loadRealResults exception:', e);
+    showToast('Could not load results — showing demo', 'error');
+    loadDemoResults();
+  }
+}
+
+/* ── Render results ── */
+function renderResults(data) {
+  var c = data.consensus;
+
+  // Title case winner name
+  var winnerDisplay = titleCase(c.winner || 'Your Destination');
+  pvSetText('winnerName', winnerDisplay);
+  pvSetText('winnerDesc', getDestDesc(c.winner));
+
+  var bgImg = document.getElementById('winnerBgImg');
+  if (bgImg) {
+    bgImg.style.opacity = '0';
+    bgImg.src = getDestImage(c.winner);
+    bgImg.onload = function() {
+      bgImg.style.transition = 'opacity 1.5s ease';
+      bgImg.style.opacity    = '1';
+    };
+  }
+
+  pvSetText('statVoters', data.total_votes || '—');
+  pvSetText('statDays',   c.avg_duration ? c.avg_duration + ' Days' : '—');
+  // Full word budget with capital
+  pvSetText('statBudget', titleCase(c.consensus_budget || '—'));
+  // Full month name
+  pvSetText('statMonth',  titleCase(c.consensus_month || '—'));
+
+  // Score bars
+  var scoreList = document.getElementById('scoreList');
+  if (scoreList && c.top_destinations) {
+    scoreList.innerHTML = c.top_destinations.map(function(d, i) {
+      return '<div class="score-bar">' +
+        '<div class="score-label">' + (i===0?'🏆':'#'+(i+1)) + ' ' + titleCase(d.destination) + '</div>' +
+        '<div class="score-track"><div class="score-fill" style="width:0%" data-pct="' + d.percentage + '"></div></div>' +
+        '<div class="score-pct">' + d.percentage + '%</div>' +
+      '</div>';
+    }).join('');
+    setTimeout(function() {
+      document.querySelectorAll('.score-fill').forEach(function(el) {
+        el.style.width = el.dataset.pct + '%';
+      });
+    }, 400);
+  }
+
+  // Recommendations
+  var recList = document.getElementById('recList');
+  if (recList && data.recommendations) {
+    recList.innerHTML = data.recommendations.map(function(r, i) {
+      var medal = i===0?'🥇':i===1?'🥈':'🥉';
+      return '<div class="rec-card">' +
+        '<div class="rec-rank ' + (i===0?'top':'') + '">' + medal + '</div>' +
+        '<img src="' + getDestImage(r.destination) + '" style="width:56px;height:56px;border-radius:10px;object-fit:cover;flex-shrink:0;" alt="' + r.destination + '"/>' +
+        '<div class="rec-info">' +
+          '<div class="rec-name">' + titleCase(r.destination) + '</div>' +
+          '<div class="rec-desc">' + (r.description||'') + '</div>' +
+          '<div class="rec-meta"><span>₹' + ((r.avg_cost_per_day||0).toLocaleString()) + '/day</span><span>' + (r.tags||[]).slice(0,2).join(' · ') + '</span></div>' +
+        '</div>' +
+        '<div class="rec-match">' + (r.match_percentage||0) + '%</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Conflicts
+  if (c.conflicts && c.conflicts.length > 0) {
+    var section = document.getElementById('conflictSection');
+    var list    = document.getElementById('conflictList');
+    if (section) section.style.display = 'block';
+    if (list) list.innerHTML = c.conflicts.map(function(cf) {
+      return '<div class="conflict-alert">' +
+        '<span class="conflict-icon">' + (cf.severity==='high'?'🔴':'🟡') + '</span>' +
+        '<span class="conflict-text">' + cf.message + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  initMap(c.winner);
+}
+
+/* ── Settlement section (loads from expenses API) ── */
+async function loadSettlementsSection(groupId) {
+  try {
+    var res  = await fetch(API_BASE + '/expenses/' + groupId);
+    var data = await res.json();
+
+    var settlements = data.settlements || [];
+    var balances    = (data.summary && data.summary.balances) ? data.summary.balances : {};
+
+    var section = document.getElementById('settlementSection');
+    if (!section) return;
+
+    // Only show if there are expenses
+    if (!data.expenses || data.expenses.length === 0) return;
+
+    section.style.display = 'block';
+
+    // Render balance pills
+    var pillsDiv = document.getElementById('balancesPills');
+    if (pillsDiv && Object.keys(balances).length > 0) {
+      pillsDiv.innerHTML = Object.entries(balances).map(function(entry) {
+        var person  = entry[0];
+        var balance = entry[1];
+        var cls     = balance > 0.5 ? 'positive' : balance < -0.5 ? 'negative' : 'zero';
+        var label   = balance > 0.5
+          ? '+ ₹' + Math.abs(balance).toLocaleString() + ' gets back'
+          : balance < -0.5
+          ? '- ₹' + Math.abs(balance).toLocaleString() + ' owes'
+          : '✓ settled';
+        return '<div class="balance-pill ' + cls + '">' +
+          '<strong>' + titleCase(person) + '</strong> ' + label +
+        '</div>';
+      }).join('');
+    }
+
+    renderSettlements(settlements);
+
+  } catch(e) {
+    // expenses API not available — hide section silently
+    console.log('Settlements not available:', e);
+  }
+}
+
+function renderSettlements(settlements) {
+  var list = document.getElementById('settlementsList');
+  var allDoneBanner = document.getElementById('allSettledBanner');
+  if (!list) return;
+
+  if (!settlements || settlements.length === 0) {
+    list.innerHTML = '<div class="no-settlements">✅ No pending settlements — everyone is even!</div>';
+    return;
+  }
+
+  list.innerHTML = settlements.map(function(s, idx) {
+    var key      = s.from + '_to_' + s.to;
+    var isSettled = !!_settledSet[key];
+    return '<div class="settlement-card-item" id="settle_' + idx + '">' +
+      '<span class="settle-from">' + titleCase(s.from) + '</span>' +
+      '<span class="settle-arrow">owes →</span>' +
+      '<span class="settle-to">' + titleCase(s.to) + '</span>' +
+      '<span class="settle-amount">₹' + (s.amount||0).toLocaleString() + '</span>' +
+      '<button class="settle-done-btn' + (isSettled ? ' settled' : '') + '" ' +
+        'onclick="markSettled(' + idx + ', \'' + key + '\', this)" ' +
+        (isSettled ? 'disabled' : '') + '>' +
+        (isSettled ? '✓ Paid' : 'Mark Paid') +
+      '</button>' +
+    '</div>';
+  }).join('');
+}
+
+function markSettled(idx, key, btn) {
+  _settledSet[key] = true;
+  btn.textContent  = '✓ Paid';
+  btn.classList.add('settled');
+  btn.disabled = true;
+
+  // Check if all are settled
+  var allBtns    = document.querySelectorAll('.settle-done-btn');
+  var allSettled = Array.from(allBtns).every(function(b){ return b.classList.contains('settled'); });
+  if (allSettled) {
+    var list   = document.getElementById('settlementsList');
+    var banner = document.getElementById('allSettledBanner');
+    if (list)   list.style.display   = 'none';
+    if (banner) banner.style.display = 'block';
+  }
+
+  showToast('Payment marked as done! 💸');
+}
+
+/* ── Weather ── */
+async function loadWeatherSection(destination) {
+  try {
+    var res  = await fetch(API_BASE + '/weather/' + encodeURIComponent(destination));
+    var data = await res.json();
+    pvSetText('weatherTemp',     data.temperature_c + '°C');
+    pvSetText('weatherDesc',     data.description || 'Clear skies');
+    pvSetText('weatherHumidity', 'Humidity: ' + data.humidity + '%');
+    var forecastRow = document.getElementById('forecastRow');
+    if (forecastRow && data.forecast && data.forecast.length > 0) {
+      forecastRow.innerHTML = data.forecast.map(function(f) {
+        return '<div class="forecast-day">' +
+          '<div class="date">' + f.date + '</div>' +
+          '<div class="temp">' + f.max_temp + '° / ' + f.min_temp + '°</div>' +
+          '<div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;">' +
+            (f.description||'').split(' ').slice(0,2).join(' ') +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+  } catch(e) {
+    pvSetText('weatherDesc', 'Weather data unavailable');
+  }
+}
+
+/* ── Itinerary ── */
+async function loadItinerarySection(destination, consensus) {
+  var itinDiv = document.getElementById('itineraryList');
+  if (itinDiv) itinDiv.innerHTML =
+    '<div style="text-align:center;padding:48px;color:var(--text-muted);">' +
+    '<div style="font-size:2rem;margin-bottom:12px;">🤖</div>' +
+    '<div style="font-weight:700;margin-bottom:6px;">Building your AI itinerary...</div>' +
+    '<div style="font-size:.85rem;">Fetching real data for ' + destination + '</div>' +
+    '</div>';
+
+  // Deduplicate: use a flag so only one request fires
+  if (window._itineraryLoading) return;
+  window._itineraryLoading = true;
+
+  try {
+    var res  = await fetch(API_BASE + '/itinerary/ai-generate', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        destination:  destination,
+        duration:     consensus.avg_duration    || 5,
+        budget:       consensus.consensus_budget || 'medium',
+        travel_style: consensus.top_styles      || ['culture'],
+        month:        consensus.consensus_month  || 'December',
+        group_size:   consensus.total_voters    || 2,
+        food_pref:    'both',
+        group_type:   'friends'
+      })
+    });
+    var data = await res.json();
+    if (data.success && data.itinerary) {
+      renderCostSection(buildCostFromItinerary(data.itinerary));
+      renderAIItinerary(data.itinerary);
+      window._itineraryLoading = false;
+      return;
+    }
+  } catch(e) {
+    console.log('AI itinerary error:', e);
+  }
+
+  window._itineraryLoading = false;
+  renderFallbackItinerary(destination);
+}
+
+function buildCostFromItinerary(it) {
+  if (it.estimated_cost && it.estimated_cost.per_person) return it.estimated_cost;
+  if (it.total_cost) return {
+    per_person: { flights:0, accommodation:0, food:0, activities:0, total: it.total_cost.per_person_inr }
+  };
+  return null;
+}
+
+function renderCostSection(cost) {
+  var grid = document.getElementById('costGrid');
+  if (!grid || !cost) return;
+  var p = cost.per_person || {};
+  grid.innerHTML =
+    '<div class="cost-item"><div class="cost-item-label">✈️ Flights</div><div class="cost-item-value">₹' + ((p.flights||0).toLocaleString()) + '</div></div>' +
+    '<div class="cost-item"><div class="cost-item-label">🏨 Hotel</div><div class="cost-item-value">₹' + ((p.accommodation||0).toLocaleString()) + '</div></div>' +
+    '<div class="cost-item"><div class="cost-item-label">🍜 Food</div><div class="cost-item-value">₹' + ((p.food||0).toLocaleString()) + '</div></div>' +
+    '<div class="cost-item"><div class="cost-item-label">🎟️ Activities</div><div class="cost-item-value">₹' + ((p.activities||0).toLocaleString()) + '</div></div>' +
+    '<div class="cost-item" style="grid-column:span 2;border-color:rgba(255,215,0,.3);">' +
+      '<div class="cost-item-label">💰 Total per person</div>' +
+      '<div class="cost-item-value" style="font-size:1.8rem;">₹' + ((p.total||0).toLocaleString()) + '</div>' +
+    '</div>';
+}
+
+function renderAIItinerary(it) {
+  var list = document.getElementById('itineraryList');
+  if (!list) return;
+
+  var aiTag = it.ai_powered
+    ? '<span style="background:rgba(108,99,255,.15);color:var(--accent-1);padding:3px 10px;border-radius:50px;font-size:.72rem;font-weight:700;margin-left:8px;">✨ AI Generated</span>'
+    : '';
+
+  var html = '<div class="card" style="margin-bottom:20px;background:linear-gradient(135deg,rgba(108,99,255,.08),rgba(255,101,132,.05));">' +
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="font-size:1rem;font-weight:700;">' + titleCase(it.destination||'') + '</div>' + aiTag + '</div>' +
+    '<div style="font-size:.88rem;color:var(--text-secondary);font-style:italic;margin-bottom:12px;">"' + (it.theme||'Your perfect trip') + '"</div>' +
+    (it.highlights||[]).map(function(h){ return '<div style="font-size:.85rem;margin-bottom:4px;"><span style="color:var(--accent-3);">★</span> ' + h + '</div>'; }).join('') +
+  '</div>';
+
+  var reach = it.reach || {};
+  if (Object.keys(reach).length > 0) {
+    html += '<div class="card" style="margin-bottom:16px;"><div style="font-weight:700;margin-bottom:10px;">🚂 How to reach ' + titleCase(it.destination||'') + '</div>' +
+      (reach.by_train  ? '<p style="font-size:.83rem;margin:4px 0;"><strong>🚆 Train:</strong> '   + reach.by_train  + '</p>' : '') +
+      (reach.by_bus    ? '<p style="font-size:.83rem;margin:4px 0;"><strong>🚌 Bus:</strong> '     + reach.by_bus    + '</p>' : '') +
+      (reach.by_flight ? '<p style="font-size:.83rem;margin:4px 0;"><strong>✈️ Flight:</strong> ' + reach.by_flight + '</p>' : '') +
+      (reach.by_road   ? '<p style="font-size:.83rem;margin:4px 0;"><strong>🚗 Road:</strong> '   + reach.by_road   + '</p>' : '') +
+    '</div>';
+  }
+
+  (it.days||[]).forEach(function(day) {
+    html += '<div class="day-card" style="margin-bottom:14px;">' +
+      '<div class="day-header" onclick="toggleDay(this)">' +
+        '<div class="day-number">D' + day.day + '</div>' +
+        '<div><div class="day-title">' + (day.title||'') + '</div>' +
+        '<div style="font-size:.78rem;color:var(--text-muted);">' + (day.day_cost_per_person||'') + ' per person · ' + (day.local_transport||'') + '</div></div>' +
+        '<span style="margin-left:auto;color:var(--text-muted);">▾</span>' +
+      '</div>' +
+      '<div class="day-body">' +
+        renderSlot('🌅 Morning', day.morning) +
+        renderSlot('☀️ Afternoon', day.afternoon) +
+        renderSlot('🌇 Evening', day.evening) +
+        renderMeal('🍽️ Lunch', day.lunch) +
+        renderMeal('🌙 Dinner', day.dinner) +
+        (day.pro_tip ? '<div style="background:rgba(255,215,0,.08);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:.82rem;">💡 ' + day.pro_tip + '</div>' : '') +
+      '</div>' +
+    '</div>';
+  });
+
+  if ((it.must_eat||[]).length > 0) {
+    html += '<div class="card" style="margin-bottom:14px;"><div style="font-weight:700;margin-bottom:10px;">🍜 Must-try food</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+      it.must_eat.map(function(f) {
+        var dish  = typeof f === 'string' ? f : (f.dish||'');
+        var where = typeof f === 'object' ? (f.where||'') : '';
+        var price = typeof f === 'object' ? (f.price||'') : '';
+        return '<div style="background:rgba(255,101,132,.08);border:1px solid rgba(255,101,132,.2);border-radius:8px;padding:6px 12px;font-size:.8rem;">' +
+          '<div style="font-weight:700;">' + dish + '</div>' +
+          (where ? '<div style="color:var(--text-muted);font-size:.72rem;">' + where + (price?' · '+price:'') + '</div>' : '') +
+        '</div>';
+      }).join('') +
+    '</div></div>';
+  }
+
+  if ((it.packing||[]).length > 0) {
+    html += '<div class="card" style="margin-bottom:14px;"><div style="font-weight:700;margin-bottom:8px;">🎒 What to pack</div>' +
+      it.packing.map(function(p){ return '<span style="display:inline-block;background:rgba(108,99,255,.08);border-radius:50px;padding:4px 12px;margin:3px;font-size:.8rem;">✓ ' + p + '</span>'; }).join('') +
+    '</div>';
+  }
+
+  var cost = it.total_cost;
+  if (cost) {
+    html += '<div class="card" style="background:linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,101,132,.08));margin-bottom:14px;">' +
+      '<div style="font-weight:700;font-size:1.2rem;margin-bottom:4px;">💰 ' + (cost.per_person_inr||'') + ' per person</div>' +
+      '<div style="font-size:.85rem;color:var(--text-secondary);">' + (cost.for_group_inr||'') + ' total for the group</div>' +
+      (cost.breakdown ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">' +
+        Object.entries(cost.breakdown).map(function(kv){
+          return '<span style="background:var(--bg-card);border-radius:8px;padding:4px 10px;font-size:.78rem;">' + kv[0] + ': <strong>' + kv[1] + '</strong></span>';
+        }).join('') +
+      '</div>' : '') +
+    '</div>';
+  }
+
+  list.innerHTML = html;
+}
+
+function renderSlot(label, slot) {
+  if (!slot) return '';
+  return '<div style="border-left:3px solid rgba(108,99,255,.3);padding:8px 12px;margin-bottom:8px;">' +
+    '<div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">' + label + (slot.time?' · '+slot.time:'') + '</div>' +
+    '<div style="font-weight:700;font-size:.9rem;">' + (slot.activity||'') + '</div>' +
+    '<div style="font-size:.82rem;color:var(--text-secondary);margin-top:2px;">' + (slot.description||'') + '</div>' +
+    '<div style="font-size:.75rem;margin-top:4px;display:flex;gap:12px;flex-wrap:wrap;">' +
+      (slot.cost      ? '<span style="color:var(--accent-gold);">💰 ' + slot.cost      + '</span>' : '') +
+      (slot.transport ? '<span style="color:var(--text-muted);">🚗 ' + slot.transport + '</span>' : '') +
+      (slot.tips      ? '<span style="color:var(--accent-3);">💡 '  + slot.tips      + '</span>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+function renderMeal(label, meal) {
+  if (!meal) return '';
+  var tc = meal.type==='veg' ? '#43e97b' : meal.type==='nonveg' ? '#ff6584' : '#ffd700';
+  return '<div style="padding:8px 0;border-top:1px solid var(--border);">' +
+    '<div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">' + label + '</div>' +
+    '<div style="font-size:.85rem;font-weight:700;">' + (meal.restaurant||'') + (meal.area?' · '+meal.area:'') + '</div>' +
+    '<div style="font-size:.75rem;display:flex;gap:10px;margin-top:3px;flex-wrap:wrap;">' +
+      (meal.type          ? '<span style="color:'+tc+';">● ' + meal.type             + '</span>' : '') +
+      (meal.cuisine       ? '<span style="color:var(--text-muted);">' + meal.cuisine + '</span>' : '') +
+      (meal.must_try      ? '<span>Try: <strong>' + meal.must_try               + '</strong></span>' : '') +
+      (meal.price_for_two ? '<span style="color:var(--accent-gold);">' + meal.price_for_two + '</span>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+function renderFallbackItinerary(destination) {
+  var list = document.getElementById('itineraryList');
+  if (!list) return;
+  var days = [
+    {day:1,title:'Arrival & Exploration',activities:[{name:'Check in & freshen up',type:'accommodation'},{name:'Evening walk',type:'sightseeing'},{name:'Welcome dinner',type:'food'}]},
+    {day:2,title:'Main Attractions',activities:[{name:'Top historical sites',type:'sightseeing'},{name:'Local market',type:'shopping'},{name:'Street food lunch',type:'food'}]},
+    {day:3,title:'Culture & Heritage',activities:[{name:'Museum visit',type:'culture'},{name:'Art gallery',type:'art'},{name:'Traditional dinner',type:'food'}]},
+    {day:4,title:'Adventure Day',activities:[{name:'Guided tour',type:'tour'},{name:'Adventure activity',type:'adventure'},{name:'Rooftop dinner',type:'food'}]},
+    {day:5,title:'Leisure & Departure',activities:[{name:'Morning at leisure',type:'relaxation'},{name:'Last minute shopping',type:'shopping'},{name:'Farewell dinner',type:'food'}]},
+  ];
+  list.innerHTML = days.map(function(day) {
+    return '<div class="day-card">' +
+      '<div class="day-header" onclick="toggleDay(this)">' +
+        '<div class="day-number">D' + day.day + '</div>' +
+        '<div><div class="day-title">' + day.title + '</div><div style="font-size:.8rem;color:var(--text-muted);">' + day.activities.length + ' activities</div></div>' +
+        '<span style="margin-left:auto;color:var(--text-muted);">▾</span>' +
+      '</div>' +
+      '<div class="day-body">' +
+        day.activities.map(function(a) {
+          return '<div class="activity"><div class="activity-dot"></div><div><div class="activity-name">' + a.name + '</div><div class="activity-type">' + a.type + '</div></div></div>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function toggleDay(header) {
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+/* ── Map ── */
+function initMap(destination) {
+  if (!window.L) return;
+  var mapEl = document.getElementById('map');
+  if (!mapEl) return;
+  if (_pvMap) {
+    var c = getDestCoords(destination);
+    _pvMap.setView(c, 11);
+    return;
+  }
+  var coords = getDestCoords(destination);
+  _pvMap = L.map('map').setView(coords, 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(_pvMap);
+  var icon = L.divIcon({
+    html: '<div style="background:linear-gradient(135deg,#6c63ff,#ff6584);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 16px rgba(108,99,255,.5);border:3px solid white;">✈</div>',
+    className: '', iconSize: [40,40], iconAnchor: [20,20]
+  });
+  L.marker(coords, {icon}).addTo(_pvMap)
+    .bindPopup('<b>' + titleCase(destination) + '</b><br>Your group\'s destination! 🎉')
+    .openPopup();
+}
+
+/* ── Deep links ── */
+async function loadDeepLinksSection(destination, duration, budget) {
+  try {
+    var res  = await fetch(API_BASE + '/deeplinks', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({destination, duration, budget})
+    });
+    var data = await res.json();
+    if (data.links) renderDeepLinks(data.links);
+  } catch(e) {}
+}
+
+function renderDeepLinks(links) {
+  var cats = {
+    flights:    {el:'linksFlights',    items:links.flights    ||[]},
+    trains:     {el:'linksTrains',     items:links.trains     ||[]},
+    buses:      {el:'linksBuses',      items:links.buses      ||[]},
+    hotels:     {el:'linksHotels',     items:links.hotels     ||[]},
+    food:       {el:'linksFood',       items:links.food       ||[]},
+    activities: {el:'linksActivities', items:links.activities ||[]},
+  };
+  Object.entries(cats).forEach(function(kv) {
+    var container = document.getElementById(kv[1].el);
+    if (!container || kv[1].items.length === 0) return;
+    container.innerHTML = kv[1].items.map(function(link) {
+      return '<a href="' + link.url + '" target="_blank" class="booking-btn">' +
+        '<span class="booking-btn-logo">' + (link.emoji||link.logo||'🔗') + '</span>' +
+        '<div class="booking-btn-info">' +
+          '<span class="booking-btn-name">' + link.name + '</span>' +
+          '<span class="booking-btn-note">' + (link.note||'') + '</span>' +
+        '</div>' +
+      '</a>';
+    }).join('');
+  });
+}
+
+/* ── Tie ── */
+function renderTieBanner(tie) {
+  _surveyWinner = tie.survey_winner;
+  var sw = tie.survey_winner;
+  document.getElementById('tieBanner').style.display = 'block';
+  pvSetText('tieDesc', 'Destinations tied: ' + (tie.tied_destinations||[]).map(titleCase).join(', ') + '. Choose how to resolve:');
+  if (sw) {
+    document.getElementById('surveyWinnerBtn').textContent = '🧠 Use Survey Pick: ' + titleCase(sw.winner);
+    pvSetText('surveyWinnerTitle',  'Why ' + titleCase(sw.winner) + '?');
+    pvSetText('surveyWinnerReason', sw.reason || '');
+  }
+}
+
+function useSurveyWinner() {
+  if (!_surveyWinner || !_lastConsensus) return;
+  document.getElementById('surveyExplanation').style.display = 'block';
+  var winner = _surveyWinner.winner;
+  pvSetText('winnerName', titleCase(winner));
+  pvSetText('winnerDesc', getDestDesc(winner));
+  var bgImg = document.getElementById('winnerBgImg');
+  if (bgImg) bgImg.src = getDestImage(winner);
+  loadItinerarySection(winner, _lastConsensus);
+  loadDeepLinksSection(winner, _lastConsensus.avg_duration||5, _lastConsensus.consensus_budget||'medium');
+}
+
+function useRevote() {
+  if (confirm('This resets all votes. Members will need to vote again. Continue?')) {
+    showToast('🔄 Starting revote...');
+    setTimeout(function(){ window.location.href = 'vote.html'; }, 1200);
+  }
+}
+
+/* ── Demo ── */
+function loadDemoResults() {
+  document.getElementById('mainResultsContent').style.display = 'block';
+  renderResults({
+    group_name: 'Demo Group', total_votes: 3,
+    consensus: {
+      winner: 'Jaipur',
+      top_destinations: [
+        {destination:'Jaipur',  percentage:100},
+        {destination:'Goa',     percentage:78},
+        {destination:'Kerala',  percentage:65}
+      ],
+      consensus_budget: 'medium', avg_duration: 7,
+      consensus_month: 'December', top_styles: ['culture','food'],
+      conflicts: []
+    },
+    recommendations: [
+      {destination:'Jaipur',  match_percentage:95, description:'The Pink City', avg_cost_per_day:3500, tags:['history','culture']},
+      {destination:'Udaipur', match_percentage:88, description:'City of Lakes', avg_cost_per_day:4000, tags:['romance','history']}
+    ]
+  });
+  loadWeatherSection('Jaipur');
+  renderFallbackItinerary('Jaipur');
+
+  // Demo settlements
+  var section = document.getElementById('settlementSection');
+  if (section) {
+    section.style.display = 'block';
+    var demoBalances = {Rahul: 1200, Priya: -800, Arjun: -400};
+    var pillsDiv = document.getElementById('balancesPills');
+    if (pillsDiv) {
+      pillsDiv.innerHTML = Object.entries(demoBalances).map(function(e) {
+        var cls = e[1] > 0 ? 'positive' : e[1] < 0 ? 'negative' : 'zero';
+        var label = e[1] > 0 ? '+ ₹'+Math.abs(e[1])+' gets back' : '- ₹'+Math.abs(e[1])+' owes';
+        return '<div class="balance-pill '+cls+'"><strong>'+e[0]+'</strong> '+label+'</div>';
+      }).join('');
+    }
+    renderSettlements([
+      {from:'Priya', to:'Rahul', amount:800},
+      {from:'Arjun', to:'Rahul', amount:400}
+    ]);
+  }
+}
+
+/* ── Share ── */
+function shareWhatsApp() {
+  var winner = document.getElementById('winnerName').textContent || 'our destination';
+  window.open('https://wa.me/?text=' + encodeURIComponent(
+    '🌍 Our group is going to *' + winner + '*!\nPlanned with PackVote ✈\nVote. Plan. Fly.'
+  ), '_blank');
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href);
+  showToast('Link copied! 🔗');
+}
+
+document.addEventListener('DOMContentLoaded', initResultsPage);
+</script>
+</body>
+</html>

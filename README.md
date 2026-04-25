@@ -1,4 +1,4 @@
-# PackVote: An AI-Powered Group Trvel Planning App
+# PackVote: An AI-Powered Group Travel Planning App
 
 ###Deployed Project URL###
 
